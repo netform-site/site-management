@@ -7207,10 +7207,6 @@ function renderSettlementTable() {
   
   // 본사/외주 필터
   const typeFilter = document.getElementById('settlementTypeFilter').value;
-  console.log('=== 필터 디버깅 ===');
-  console.log('typeFilter:', typeFilter);
-  console.log('managerFilter:', managerFilter);
-  console.log('필터 전 데이터 수:', dataToRender.length);
   
   if (typeFilter === '본사') {
     dataToRender = dataToRender.filter(item => {
@@ -7221,7 +7217,6 @@ function renderSettlementTable() {
       if (!isOutsourceManager(manager) && !item.type?.includes('(외)')) return true;
       return false;
     });
-    console.log('본사 필터 후 데이터 수:', dataToRender.length);
   } else if (typeFilter === '외주') {
     dataToRender = dataToRender.filter(item => {
       const manager = item.manager || '';
@@ -7231,15 +7226,10 @@ function renderSettlementTable() {
       if (item.type?.includes('(외)')) return true;
       return false;
     });
-    console.log('외주 필터 후 데이터 수:', dataToRender.length);
   }
   
   if (managerFilter) {
-    console.log('담당자 필터 적용 전:', dataToRender.length);
-    console.log('찾는 담당자:', managerFilter);
-    console.log('데이터 담당자들:', [...new Set(dataToRender.map(i => i.manager))]);
     dataToRender = dataToRender.filter(item => item.manager === managerFilter);
-    console.log('담당자 필터 후 데이터 수:', dataToRender.length);
   }
   if (statusFilter) {
     dataToRender = dataToRender.filter(item => item.status && item.status.includes(statusFilter));
@@ -7415,6 +7405,9 @@ function updateSettlementStatus(year, no, status) {
   localStorage.setItem('settlementStatusData', JSON.stringify(statusData));
   console.log('정산 상태 저장:', key, '→', status);
   
+  // Firebase에도 저장
+  saveSettlementStatusToFirebase(statusData);
+  
   // settlementData에도 반영 (현재 화면용)
   const item = settlementData.find(d => String(d.year) === String(year) && String(d.no) === String(no));
   if (item) {
@@ -7435,6 +7428,35 @@ function updateSettlementStatus(year, no, status) {
   showToast(`${year}년 NO.${no} → ${status}`, 'success');
 }
 
+// Firebase에 정산 상태 저장
+async function saveSettlementStatusToFirebase(statusData) {
+  try {
+    await db.collection('appData').doc('settlementStatusData').set({
+      data: statusData,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    console.log('Firebase에 정산 상태 저장 완료');
+  } catch (e) {
+    console.error('Firebase 정산 상태 저장 실패:', e);
+  }
+}
+
+// Firebase에서 정산 상태 불러오기
+async function loadSettlementStatusFromFirebase() {
+  try {
+    const doc = await db.collection('appData').doc('settlementStatusData').get();
+    if (doc.exists && doc.data().data) {
+      const statusData = doc.data().data;
+      localStorage.setItem('settlementStatusData', JSON.stringify(statusData));
+      console.log('Firebase에서 정산 상태 불러오기:', Object.keys(statusData).length, '건');
+      return statusData;
+    }
+  } catch (e) {
+    console.error('Firebase 정산 상태 불러오기 실패:', e);
+  }
+  return null;
+}
+
 // 정산 상태 저장 (일괄 저장용)
 function saveSettlementStatusToStorage() {
   const statusData = JSON.parse(localStorage.getItem('settlementStatusData') || '{}');
@@ -7445,15 +7467,28 @@ function saveSettlementStatusToStorage() {
     }
   });
   localStorage.setItem('settlementStatusData', JSON.stringify(statusData));
+  saveSettlementStatusToFirebase(statusData);  // Firebase에도 저장
   console.log('정산 상태 저장 완료:', Object.keys(statusData).length, '건');
 }
 
 // 정산 상태 불러오기
-function loadSettlementStatusFromStorage() {
+async function loadSettlementStatusFromStorage() {
   try {
-    const saved = localStorage.getItem('settlementStatusData');
-    if (saved) {
-      const statusData = JSON.parse(saved);
+    // Firebase에서 먼저 시도
+    const firebaseData = await loadSettlementStatusFromFirebase();
+    
+    // Firebase에 데이터가 있으면 사용
+    let statusData = firebaseData;
+    
+    // Firebase에 없으면 localStorage 확인
+    if (!statusData) {
+      const saved = localStorage.getItem('settlementStatusData');
+      if (saved) {
+        statusData = JSON.parse(saved);
+      }
+    }
+    
+    if (statusData) {
       console.log('정산 상태 불러오기:', Object.keys(statusData).length, '건');
       settlementData.forEach(item => {
         const key = `${item.year}_${item.no}`;
