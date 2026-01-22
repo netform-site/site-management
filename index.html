@@ -1349,7 +1349,17 @@ tr.selected { background: var(--primary-light); }
       <div class="modal-title" id="reportModalTitle">📋 대표님 보고서</div>
       <button class="modal-close" onclick="closeReportModal()" style="color:white;">×</button>
     </div>
-    <div class="modal-body" id="reportContent">
+    <div class="modal-body">
+      <!-- 담당자 필터 -->
+      <div style="margin-bottom:1rem;padding:1rem;background:#f5f5f5;border-radius:8px;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+        <label style="font-weight:600;color:#333;">📌 담당자 선택:</label>
+        <select id="reportManagerFilter" onchange="renderReport(currentReportType)" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+          <option value="">전체 담당자</option>
+        </select>
+        <span id="reportFilterInfo" style="margin-left:auto;font-size:0.85rem;color:#666;"></span>
+      </div>
+      <div id="reportContent">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeReportModal()">닫기</button>
@@ -8638,7 +8648,10 @@ function renderConsultingTable() {
         <td style="text-align:right;font-family:monospace;font-weight:600;color:${item.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
         <td style="text-align:center;">${item.profitRate}%</td>
         <td style="text-align:right;font-family:monospace;font-weight:600;color:#7b1fa2;">${fmt(item.settlement)}</td>
-        <td style="text-align:center;">${item.manager || '-'}</td>
+        <td style="text-align:center;">
+          ${item.manager || '-'}
+          ${item.manager && isOutsourceManager(item.manager) ? '<br><span style="background:#fff3e0;color:#e65100;padding:0.1rem 0.3rem;border-radius:3px;font-size:0.6rem;">외주</span>' : (item.manager && HQ_MANAGERS.includes(item.manager) ? '<br><span style="background:#e3f2fd;color:#1976d2;padding:0.1rem 0.3rem;border-radius:3px;font-size:0.6rem;">본사</span>' : '')}
+        </td>
         <td style="text-align:center;">
           <select onchange="updateConsultingSettled('${item.id}', this.value)" style="padding:0.25rem;border-radius:4px;border:1px solid #ddd;font-size:0.75rem;background:${bgColor};color:${txtColor};">
             <option value="미정산" ${settledValue === '미정산' ? 'selected' : ''}>미정산</option>
@@ -9639,7 +9652,36 @@ function openReportModal(type = '본사') {
   const header = document.getElementById('reportModal').querySelector('.modal-header');
   header.style.background = type === '본사' ? '#1565c0' : '#7b1fa2';
   
+  // 담당자 필터 업데이트
+  updateReportManagerFilter(type);
+  
   renderReport(type);
+}
+
+// 보고서 담당자 필터 업데이트
+function updateReportManagerFilter(type) {
+  const select = document.getElementById('reportManagerFilter');
+  select.innerHTML = '<option value="">전체 담당자</option>';
+  
+  // 해당 타입의 담당자 목록 수집
+  let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
+  const managers = new Set();
+  
+  data.forEach(item => {
+    const manager = item.manager || '기타';
+    const isExt = item.hqType === '외주' || isOutsourceManager(manager);
+    
+    if (type === '본사' && !isExt && !EXCLUDE_MANAGERS.includes(manager)) {
+      managers.add(manager);
+    } else if (type === '외주' && isExt) {
+      managers.add(manager);
+    }
+  });
+  
+  // 정렬 후 옵션 추가
+  [...managers].sort().forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
 }
 
 function closeReportModal() {
@@ -9681,6 +9723,15 @@ function renderReport(reportType = '본사') {
     });
   } else if (yearFilter === '2026') {
     data = data.filter(item => String(item.year).includes('26'));
+  }
+  
+  // 담당자 필터 적용
+  const managerFilter = document.getElementById('reportManagerFilter')?.value;
+  if (managerFilter) {
+    data = data.filter(item => item.manager === managerFilter);
+    document.getElementById('reportFilterInfo').textContent = `📌 ${managerFilter} 담당자 실적`;
+  } else {
+    document.getElementById('reportFilterInfo').textContent = '';
   }
   
   // 본사/외주별 담당자 집계 (정산 제외 담당자 분리)
