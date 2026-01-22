@@ -7208,9 +7208,23 @@ function renderSettlementTable() {
   // 본사/외주 필터
   const typeFilter = document.getElementById('settlementTypeFilter').value;
   if (typeFilter === '본사') {
-    dataToRender = dataToRender.filter(item => item.hqType === '본사' || (item.type && (item.type.includes('(본)') || (!item.type.includes('(외)')))));
+    dataToRender = dataToRender.filter(item => {
+      const manager = item.manager || '';
+      // 본사: hqType이 '본사'이거나, 외주 목록에 없고 본사 목록에 있는 경우
+      if (item.hqType === '본사') return true;
+      if (HQ_MANAGERS.includes(manager)) return true;
+      if (!isOutsourceManager(manager) && !item.type?.includes('(외)')) return true;
+      return false;
+    });
   } else if (typeFilter === '외주') {
-    dataToRender = dataToRender.filter(item => item.hqType === '외주' || (item.type && item.type.includes('(외)')));
+    dataToRender = dataToRender.filter(item => {
+      const manager = item.manager || '';
+      // 외주: hqType이 '외주'이거나, 외주 목록에 있는 경우
+      if (item.hqType === '외주') return true;
+      if (isOutsourceManager(manager)) return true;
+      if (item.type?.includes('(외)')) return true;
+      return false;
+    });
   }
   
   if (managerFilter) {
@@ -7620,8 +7634,8 @@ function generateSettlementFromCurrentData() {
       if (item.type && item.type.includes('(외)')) {
         hqType = '외주';
       }
-      // 외주 담당자 목록에 있으면 외주
-      if (EXT_MANAGERS.includes(manager)) {
+      // 외주 담당자 목록에 있으면 외주 (새로운 outsourceManagers 포함)
+      if (EXT_MANAGERS.includes(manager) || isOutsourceManager(manager)) {
         hqType = '외주';
       }
       // 본사 담당자 목록에 있으면 무조건 본사 (우선순위 높음)
