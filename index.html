@@ -10427,24 +10427,179 @@ function renderExtUnsettledByYear(data) {
 
 function printReport() {
   const content = document.getElementById('reportContent').innerHTML;
+  const reportTitle = document.getElementById('reportModalTitle')?.textContent || '정산 보고서';
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>정산 현황 보고서</title>
+      <title>${reportTitle}</title>
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 20px; font-size: 12px; }
-        @media print { body { padding: 0; } }
+        
+        body { 
+          font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+          padding: 30px 40px; 
+          font-size: 11px; 
+          color: #333;
+          line-height: 1.5;
+          background: white;
+        }
+        
+        /* 보고서 컨테이너 */
+        .report-container {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* 헤더 스타일 */
+        h2 {
+          font-size: 20px !important;
+          font-weight: 700 !important;
+          text-align: center;
+          padding-bottom: 10px;
+          margin-bottom: 5px !important;
+          border-bottom: 3px solid #1565c0;
+        }
+        
+        h3 {
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          margin-top: 20px !important;
+          margin-bottom: 10px !important;
+          padding: 8px 12px !important;
+          border-radius: 4px;
+        }
+        
+        h4 {
+          font-size: 12px !important;
+          font-weight: 600 !important;
+        }
+        
+        /* 요약 카드 */
+        [style*="display:grid"][style*="grid-template-columns:repeat(4"] {
+          display: flex !important;
+          justify-content: space-around;
+          gap: 15px;
+          margin: 15px 0;
+        }
+        
+        [style*="display:grid"][style*="grid-template-columns:repeat(4"] > div {
+          flex: 1;
+          text-align: center;
+          padding: 12px 8px !important;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          background: #f9f9f9 !important;
+        }
+        
+        /* 테이블 스타일 */
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 10px 0;
+          font-size: 10px;
+        }
+        
+        th {
+          background: #1565c0 !important;
+          color: white !important;
+          font-weight: 600;
+          padding: 8px 6px !important;
+          text-align: center;
+          border: 1px solid #1565c0 !important;
+        }
+        
+        td {
+          padding: 6px !important;
+          border: 1px solid #ddd !important;
+          vertical-align: middle;
+        }
+        
+        tfoot td {
+          background: #e3f2fd !important;
+          font-weight: 700 !important;
+        }
+        
+        /* 금액 스타일 */
+        [style*="font-family:monospace"], 
+        [style*="font-family:'Courier New'"] {
+          font-family: 'Noto Sans KR', sans-serif !important;
+          font-variant-numeric: tabular-nums;
+        }
+        
+        /* 정산상태 뱃지 */
+        span[style*="border-radius:3px"] {
+          padding: 2px 6px !important;
+          font-size: 9px !important;
+          font-weight: 600 !important;
+        }
+        
+        /* 총합계 박스 */
+        [style*="background:var(--gray-700)"],
+        [style*="background:#455a64"] {
+          background: #37474f !important;
+          color: white !important;
+          padding: 15px !important;
+          border-radius: 6px;
+          margin: 15px 0;
+        }
+        
+        /* 미정산 내역 박스 */
+        [style*="background:#ffebee"] {
+          background: #ffebee !important;
+          border: 1px solid #ef9a9a !important;
+          padding: 12px !important;
+          border-radius: 6px;
+          text-align: center;
+        }
+        
+        /* 푸터 */
+        [style*="㈜석민이앤씨"] {
+          margin-top: 20px;
+          padding-top: 15px;
+          border-top: 1px solid #ddd;
+          text-align: center;
+          font-size: 10px;
+          color: #999;
+        }
+        
+        /* 인쇄 설정 */
+        @media print {
+          body { 
+            padding: 15px 20px; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          
+          h2 { font-size: 18px !important; }
+          h3 { font-size: 12px !important; }
+          table { font-size: 9px; }
+          th, td { padding: 4px 5px !important; }
+          
+          /* 페이지 나눔 방지 */
+          tr { page-break-inside: avoid; }
+          table { page-break-inside: auto; }
+        }
       </style>
     </head>
-    <body>${content}</body>
+    <body>
+      <div class="report-container">
+        ${content}
+      </div>
+    </body>
     </html>
   `);
   printWindow.document.close();
-  setTimeout(() => printWindow.print(), 300);
+  setTimeout(() => printWindow.print(), 500);
 }
 
 function downloadReportExcel() {
