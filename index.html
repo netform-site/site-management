@@ -10034,28 +10034,28 @@ function renderReport(reportType = '본사') {
       ${reportType === '본사' ? renderHqUnsettledByYear(data) : renderExtUnsettledByYear(data)}
       
       <!-- 총 합계 -->
-      <div style="background:var(--gray-700);color:white;padding:1rem;border-radius:8px;margin-bottom:1rem;">
+      <div style="background:#374151;color:#ffffff;padding:1rem;border-radius:8px;margin-bottom:1rem;">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;opacity:0.8;">총 건수</div>
-            <div style="font-size:1.25rem;font-weight:700;">${grandTotal.count}건</div>
+            <div style="font-size:0.75rem;color:#e0e0e0;">총 건수</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#ffffff;">${grandTotal.count}건</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;opacity:0.8;">총 이익금</div>
-            <div style="font-size:1.25rem;font-weight:700;">${fmtAmount(grandTotal.profit)}</div>
+            <div style="font-size:0.75rem;color:#e0e0e0;">총 이익금</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#ffffff;">${fmtAmount(grandTotal.profit)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;opacity:0.8;">담당자 배분 합계</div>
-            <div style="font-size:1.25rem;font-weight:700;">${fmtAmount(grandTotal.realSettlement)}</div>
+            <div style="font-size:0.75rem;color:#e0e0e0;">담당자 배분 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#ffffff;">${fmtAmount(grandTotal.realSettlement)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;opacity:0.8;">회사 수익 합계</div>
-            <div style="font-size:1.25rem;font-weight:700;">${fmtAmount(grandTotal.companyProfit)}</div>
+            <div style="font-size:0.75rem;color:#e0e0e0;">회사 수익 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#ffffff;">${fmtAmount(grandTotal.companyProfit)}</div>
           </div>
         </div>
       </div>
       
-      <div style="text-align:center;padding-top:1rem;border-top:1px solid var(--gray-200);color:var(--gray-400);font-size:0.75rem;">
+      <div style="text-align:center;padding-top:1rem;border-top:1px solid #ddd;color:#999;font-size:0.75rem;">
         ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
