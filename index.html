@@ -573,7 +573,8 @@ tr.selected { background: var(--primary-light); }
         </select>
         <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
           <span id="consultingMainCount" style="font-size:0.85rem;color:#666;">0건</span>
-          <button class="btn btn-outline btn-sm" onclick="openTrashModal()" style="color:#ff9800;border-color:#ff9800;">🗑️ 휴지통</button>
+          <button class="btn btn-outline btn-sm" onclick="openOutsourceManagerModal()" style="color:#ff9800;border-color:#ff9800;">👥 외주관리</button>
+          <button class="btn btn-outline btn-sm" onclick="openTrashModal()" style="color:#9e9e9e;border-color:#9e9e9e;">🗑️ 휴지통</button>
           <button class="btn btn-success btn-sm" onclick="downloadConsultingListExcel()">📥 엑셀</button>
         </div>
       </div>
@@ -1997,6 +1998,140 @@ let filteredData = null;
 // 본사 담당자 목록 (외주가 아닌 직원)
 const HQ_MANAGERS = ['황윤선', '김성민', '이필선', '한준엽', '정정훈', '조재연', '한인규'];
 
+// 외주 영업사원 목록 (이름: 회사이익요율%)
+let outsourceManagers = {
+  '조성용': { rate: 2, companyExpenseRate: 10 }  // 회사이익 2%, 회사경비 10%
+};
+
+// 외주 영업사원 로드
+function loadOutsourceManagers() {
+  try {
+    const saved = localStorage.getItem('outsourceManagers');
+    if (saved) {
+      outsourceManagers = JSON.parse(saved);
+    }
+  } catch(e) {
+    console.error('외주 영업사원 로드 실패:', e);
+  }
+  // Firebase에서도 로드
+  loadOutsourceManagersFromFirebase();
+}
+
+async function loadOutsourceManagersFromFirebase() {
+  try {
+    const doc = await db.collection('appData').doc('outsourceManagers').get();
+    if (doc.exists && doc.data().data) {
+      outsourceManagers = doc.data().data;
+      localStorage.setItem('outsourceManagers', JSON.stringify(outsourceManagers));
+    }
+  } catch(e) {
+    console.error('Firebase outsourceManagers load error:', e);
+  }
+}
+
+async function saveOutsourceManagersToFirebase() {
+  try {
+    await db.collection('appData').doc('outsourceManagers').set({
+      data: outsourceManagers,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {
+    console.error('Firebase outsourceManagers save error:', e);
+  }
+}
+
+// 외주 영업사원 추가
+function addOutsourceManager(name, rate, companyExpenseRate = 10) {
+  if (!name || name.trim() === '') return false;
+  name = name.trim();
+  outsourceManagers[name] = { 
+    rate: parseFloat(rate) || 2, 
+    companyExpenseRate: parseFloat(companyExpenseRate) || 10 
+  };
+  localStorage.setItem('outsourceManagers', JSON.stringify(outsourceManagers));
+  saveOutsourceManagersToFirebase();
+  return true;
+}
+
+// 외주 영업사원 삭제
+function removeOutsourceManager(name) {
+  if (outsourceManagers[name]) {
+    delete outsourceManagers[name];
+    localStorage.setItem('outsourceManagers', JSON.stringify(outsourceManagers));
+    saveOutsourceManagersToFirebase();
+    return true;
+  }
+  return false;
+}
+
+// 본사/외주 구분 확인
+function isOutsourceManager(name) {
+  return outsourceManagers.hasOwnProperty(name);
+}
+
+// 외주 영업사원 요율 가져오기
+function getOutsourceRate(name) {
+  if (outsourceManagers[name]) {
+    return outsourceManagers[name].rate;
+  }
+  return 2; // 기본값
+}
+
+// 외주 영업사원 회사경비율 가져오기
+function getOutsourceCompanyExpenseRate(name) {
+  if (outsourceManagers[name]) {
+    return outsourceManagers[name].companyExpenseRate;
+  }
+  return 10; // 기본값 10%
+}
+
+// 정산금 계산 (본사 vs 외주)
+function calculateSettlement(manager, bidAmount, execAmount, otherExpense) {
+  bidAmount = parseFloat(bidAmount) || 0;
+  execAmount = parseFloat(execAmount) || 0;
+  otherExpense = parseFloat(otherExpense) || 0;
+  
+  if (isOutsourceManager(manager)) {
+    // 외주: 낙찰금액 - 실행금액 - 기타경비 - 회사경비(10%) - 회사이익(2~5%)
+    const companyExpenseRate = getOutsourceCompanyExpenseRate(manager);
+    const companyProfitRate = getOutsourceRate(manager);
+    const companyExpense = bidAmount * (companyExpenseRate / 100);
+    const companyProfit = bidAmount * (companyProfitRate / 100);
+    const settlement = bidAmount - execAmount - otherExpense - companyExpense - companyProfit;
+    
+    return {
+      type: '외주',
+      bidAmount: bidAmount,
+      execAmount: execAmount,
+      otherExpense: otherExpense,
+      companyExpense: companyExpense,
+      companyExpenseRate: companyExpenseRate,
+      companyProfit: companyProfit,
+      companyProfitRate: companyProfitRate,
+      settlement: settlement,  // 외주 정산금 (나머지 전부)
+      profit: bidAmount - execAmount - otherExpense  // 총 이익금
+    };
+  } else {
+    // 본사: 이익금 × 15%
+    const profit = bidAmount - execAmount - otherExpense;
+    const settlement = profit > 0 ? profit * 0.15 : 0;
+    const companyProfit = profit - settlement;
+    
+    return {
+      type: '본사',
+      bidAmount: bidAmount,
+      execAmount: execAmount,
+      otherExpense: otherExpense,
+      companyExpense: 0,
+      companyExpenseRate: 0,
+      companyProfit: companyProfit,
+      companyProfitRate: 85,
+      settlement: settlement,  // 본사 정산금 (이익금의 15%)
+      profit: profit
+    };
+  }
+}
+
 // 사용자가 추가한 담당자 목록 (localStorage에 저장)
 let customManagers = [];
 
@@ -2018,9 +2153,9 @@ function saveCustomManagers() {
   localStorage.setItem('customManagers', JSON.stringify(customManagers));
 }
 
-// 모든 담당자 목록 가져오기 (기본 + 사용자 추가)
+// 모든 담당자 목록 가져오기 (기본 + 사용자 추가 + 외주)
 function getAllManagers() {
-  const allManagers = new Set([...HQ_MANAGERS, ...customManagers]);
+  const allManagers = new Set([...HQ_MANAGERS, ...customManagers, ...Object.keys(outsourceManagers)]);
   // 데이터에서 추가 담당자 수집
   if (typeof consultingListData !== 'undefined') {
     consultingListData.forEach(d => { if (d.manager) allManagers.add(d.manager); });
@@ -2032,7 +2167,7 @@ function getAllManagers() {
 function addCustomManager(name) {
   if (!name || name.trim() === '') return false;
   name = name.trim();
-  if (HQ_MANAGERS.includes(name) || customManagers.includes(name)) {
+  if (HQ_MANAGERS.includes(name) || customManagers.includes(name) || outsourceManagers[name]) {
     return false; // 이미 존재
   }
   customManagers.push(name);
@@ -2086,6 +2221,7 @@ let detailPhotos = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   loadCustomManagers();  // 사용자 추가 담당자 로드
+  loadOutsourceManagers();  // 외주 영업사원 로드
   initYearTabs();
   initDragDrop();
   loadFromStorage();
@@ -8785,7 +8921,10 @@ function renderConsultingMain() {
         <td style="padding:0.5rem 0.4rem;font-size:0.8rem;color:#666;border-bottom:1px solid #e0e0e0;">${item.project || '-'}</td>
         <td style="padding:0.5rem 0.4rem;text-align:right;font-family:monospace;color:#00897b;font-weight:600;border-bottom:1px solid #e0e0e0;">${fmt(item.bidAmount)}</td>
         <td style="padding:0.5rem 0.4rem;text-align:right;font-family:monospace;border-bottom:1px solid #e0e0e0;">${fmt(item.execAmount)}</td>
-        <td style="padding:0.5rem 0.4rem;text-align:center;border-bottom:1px solid #e0e0e0;">${item.manager || '-'}</td>
+        <td style="padding:0.5rem 0.4rem;text-align:center;border-bottom:1px solid #e0e0e0;">
+          ${item.manager || '-'}
+          ${item.manager && isOutsourceManager(item.manager) ? '<span style="background:#fff3e0;color:#e65100;padding:0.1rem 0.3rem;border-radius:3px;font-size:0.65rem;margin-left:2px;">외주</span>' : (item.manager && HQ_MANAGERS.includes(item.manager) ? '<span style="background:#e3f2fd;color:#1976d2;padding:0.1rem 0.3rem;border-radius:3px;font-size:0.65rem;margin-left:2px;">본사</span>' : '')}
+        </td>
         <td style="padding:0.5rem 0.4rem;font-size:0.8rem;border-bottom:1px solid #e0e0e0;">${item.company || '-'}</td>
         <td style="padding:0.5rem 0.4rem;text-align:center;font-size:0.8rem;border-bottom:1px solid #e0e0e0;">${item.companyManager || '-'}</td>
         <td style="padding:0.5rem 0.4rem;text-align:center;font-size:0.8rem;border-bottom:1px solid #e0e0e0;">${item.warranty || '-'}</td>
@@ -10157,6 +10296,157 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
+
+<!-- 외주 영업사원 관리 모달 -->
+<div class="modal" id="outsourceManagerModal">
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header" style="background:linear-gradient(135deg, #ff9800, #f57c00);">
+      <div class="modal-title">👥 외주 영업사원 관리</div>
+      <button class="modal-close" onclick="closeOutsourceManagerModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:1.5rem;">
+        <h4 style="margin-bottom:0.75rem;color:#333;">📝 신규 등록</h4>
+        <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;">
+          <div>
+            <label style="font-size:0.8rem;color:#666;display:block;margin-bottom:0.25rem;">이름</label>
+            <input type="text" id="newOutsourceName" placeholder="이름" style="padding:0.5rem;border:1px solid #ddd;border-radius:6px;width:120px;">
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;display:block;margin-bottom:0.25rem;">회사이익 (%)</label>
+            <input type="number" id="newOutsourceRate" placeholder="2" value="2" min="0" max="10" step="0.5" style="padding:0.5rem;border:1px solid #ddd;border-radius:6px;width:80px;">
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:#666;display:block;margin-bottom:0.25rem;">회사경비 (%)</label>
+            <input type="number" id="newOutsourceExpenseRate" placeholder="10" value="10" min="0" max="20" step="1" style="padding:0.5rem;border:1px solid #ddd;border-radius:6px;width:80px;">
+          </div>
+          <button onclick="addNewOutsourceManager()" class="btn btn-primary" style="height:38px;">추가</button>
+        </div>
+      </div>
+      
+      <h4 style="margin-bottom:0.75rem;color:#333;">📋 등록된 외주 영업사원</h4>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th class="text-center">회사이익 (%)</th>
+              <th class="text-center">회사경비 (%)</th>
+              <th class="text-center">관리</th>
+            </tr>
+          </thead>
+          <tbody id="outsourceManagerTableBody">
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="margin-top:1rem;padding:1rem;background:#f5f5f5;border-radius:8px;">
+        <h5 style="margin-bottom:0.5rem;color:#666;">💡 계산 방식 안내</h5>
+        <p style="font-size:0.85rem;color:#666;margin:0;">
+          <strong>외주 정산금</strong> = 낙찰금액 - 실행금액 - 기타경비 - 회사경비(%) - 회사이익(%)
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOutsourceManagerModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 외주 영업사원 관리 모달
+function openOutsourceManagerModal() {
+  renderOutsourceManagerList();
+  document.getElementById('outsourceManagerModal').classList.add('active');
+}
+
+function closeOutsourceManagerModal() {
+  document.getElementById('outsourceManagerModal').classList.remove('active');
+}
+
+function renderOutsourceManagerList() {
+  const tbody = document.getElementById('outsourceManagerTableBody');
+  const managers = Object.keys(outsourceManagers);
+  
+  if (managers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:#999;">등록된 외주 영업사원이 없습니다.</td></tr>';
+    return;
+  }
+  
+  let html = '';
+  managers.forEach(name => {
+    const info = outsourceManagers[name];
+    html += `
+      <tr>
+        <td style="font-weight:500;">${name}</td>
+        <td class="text-center">${info.rate}%</td>
+        <td class="text-center">${info.companyExpenseRate}%</td>
+        <td class="text-center">
+          <button onclick="editOutsourceManager('${name}')" style="padding:0.25rem 0.5rem;border:none;background:#2196f3;color:white;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">수정</button>
+          <button onclick="deleteOutsourceManager('${name}')" style="padding:0.25rem 0.5rem;border:none;background:#f44336;color:white;border-radius:4px;cursor:pointer;font-size:0.75rem;">삭제</button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+}
+
+function addNewOutsourceManager() {
+  const name = document.getElementById('newOutsourceName').value.trim();
+  const rate = parseFloat(document.getElementById('newOutsourceRate').value) || 2;
+  const expenseRate = parseFloat(document.getElementById('newOutsourceExpenseRate').value) || 10;
+  
+  if (!name) {
+    showToast('이름을 입력해주세요.', 'error');
+    return;
+  }
+  
+  if (HQ_MANAGERS.includes(name)) {
+    showToast('본사 영업사원은 외주로 등록할 수 없습니다.', 'error');
+    return;
+  }
+  
+  if (addOutsourceManager(name, rate, expenseRate)) {
+    showToast(`'${name}' 외주 영업사원이 등록되었습니다.`, 'success');
+    document.getElementById('newOutsourceName').value = '';
+    document.getElementById('newOutsourceRate').value = '2';
+    document.getElementById('newOutsourceExpenseRate').value = '10';
+    renderOutsourceManagerList();
+  } else {
+    showToast('등록에 실패했습니다.', 'error');
+  }
+}
+
+function editOutsourceManager(name) {
+  const info = outsourceManagers[name];
+  const newRate = prompt(`'${name}'의 회사이익 요율(%)을 입력하세요:`, info.rate);
+  if (newRate === null) return;
+  
+  const newExpenseRate = prompt(`'${name}'의 회사경비 요율(%)을 입력하세요:`, info.companyExpenseRate);
+  if (newExpenseRate === null) return;
+  
+  outsourceManagers[name] = {
+    rate: parseFloat(newRate) || 2,
+    companyExpenseRate: parseFloat(newExpenseRate) || 10
+  };
+  
+  localStorage.setItem('outsourceManagers', JSON.stringify(outsourceManagers));
+  saveOutsourceManagersToFirebase();
+  
+  showToast(`'${name}' 정보가 수정되었습니다.`, 'success');
+  renderOutsourceManagerList();
+}
+
+function deleteOutsourceManager(name) {
+  if (!confirm(`'${name}' 외주 영업사원을 삭제하시겠습니까?`)) return;
+  
+  if (removeOutsourceManager(name)) {
+    showToast(`'${name}'이(가) 삭제되었습니다.`, 'success');
+    renderOutsourceManagerList();
+  }
+}
+</script>
 
 </body>
 </html>
