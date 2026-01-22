@@ -994,6 +994,7 @@ tr.selected { background: var(--primary-light); }
       
     </div>
     <div class="modal-footer">
+      <button class="btn" onclick="bulkSetSettlementStatus()" style="background:#ff5722;color:white;">🔄 일괄 정산상태 설정</button>
       <button class="btn btn-outline" onclick="closeSettlementModal()">닫기</button>
       <button class="btn" onclick="openEmailManageModal()" style="background:#607d8b;color:white;">⚙️ 이메일 관리</button>
       <button class="btn btn-warning" onclick="openConfirmationModal()" style="background:#ff9800;color:white;">📄 담당자 확인서</button>
@@ -7500,6 +7501,66 @@ async function loadSettlementStatusFromStorage() {
   } catch (e) {
     console.error('정산 상태 불러오기 실패:', e);
   }
+}
+
+// 일괄 정산상태 설정
+async function bulkSetSettlementStatus() {
+  if (!confirm('정산 상태를 일괄 설정하시겠습니까?\n\n• 2024년 전체 → 정산완료\n• 2025년 입금완료 → 미정산\n• 2025년 미입금 → 진행중\n• 2026년 입금완료 → 미정산\n• 2026년 미입금 → 진행중')) {
+    return;
+  }
+  
+  const data = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+  const statusData = {};
+  
+  let count24 = 0, count25Paid = 0, count25Unpaid = 0, count26Paid = 0, count26Unpaid = 0;
+  
+  data.forEach(item => {
+    const year = String(item.year);
+    const key = `${item.year}_${item.no}`;
+    const isPaid = item.status && item.status.includes('입금');
+    
+    if (year.includes('24')) {
+      // 2024년 → 정산완료
+      statusData[key] = '정산완료';
+      item.settled = '정산완료';
+      count24++;
+    } else if (year.includes('25')) {
+      if (isPaid) {
+        // 2025년 입금완료 → 미정산
+        statusData[key] = '미정산';
+        item.settled = '미정산';
+        count25Paid++;
+      } else {
+        // 2025년 미입금 → 진행중
+        statusData[key] = '진행중';
+        item.settled = '진행중';
+        count25Unpaid++;
+      }
+    } else if (year.includes('26')) {
+      if (isPaid) {
+        // 2026년 입금완료 → 미정산
+        statusData[key] = '미정산';
+        item.settled = '미정산';
+        count26Paid++;
+      } else {
+        // 2026년 미입금 → 진행중
+        statusData[key] = '진행중';
+        item.settled = '진행중';
+        count26Unpaid++;
+      }
+    }
+  });
+  
+  // localStorage 저장
+  localStorage.setItem('settlementStatusData', JSON.stringify(statusData));
+  
+  // Firebase 저장
+  await saveSettlementStatusToFirebase(statusData);
+  
+  // 화면 새로고침
+  renderSettlementTable();
+  
+  showToast(`일괄 설정 완료!\n24년: ${count24}건 정산완료\n25년: ${count25Paid}건 미정산, ${count25Unpaid}건 진행중\n26년: ${count26Paid}건 미정산, ${count26Unpaid}건 진행중`, 'success');
 }
 
 // 정산관리 통계 카드 업데이트
