@@ -10027,6 +10027,9 @@ function renderReport(reportType = '본사') {
       </div>
       ` : ''}
       
+      <!-- 현장별 상세 리스트 -->
+      ${renderSiteDetailList(data, reportType, managerFilter, themeColor, themeBgColor)}
+      
       <!-- 본사 담당자별 미정산 내역 (24년/25년 분리) - 본사 보고서에만 표시 -->
       ${reportType === '본사' ? renderHqUnsettledByYear(data) : renderExtUnsettledByYear(data)}
       
@@ -10059,6 +10062,96 @@ function renderReport(reportType = '본사') {
   `;
   
   document.getElementById('reportContent').innerHTML = html;
+}
+
+// 현장별 상세 리스트 렌더링
+function renderSiteDetailList(data, reportType, managerFilter, themeColor, themeBgColor) {
+  // 해당 타입만 필터
+  let filteredData = data.filter(item => {
+    const isExt = item.hqType === '외주' || isOutsourceManager(item.manager) || (item.type && item.type.includes('(외)'));
+    const isExcluded = item.isExcluded || EXCLUDE_MANAGERS.includes(item.manager);
+    
+    if (reportType === '본사') {
+      return !isExt && !isExcluded;
+    } else {
+      return isExt;
+    }
+  });
+  
+  // 담당자 필터 적용
+  if (managerFilter) {
+    filteredData = filteredData.filter(item => item.manager === managerFilter);
+  }
+  
+  if (filteredData.length === 0) return '';
+  
+  // 년도별 정렬 (최신순)
+  filteredData.sort((a, b) => {
+    if (b.year !== a.year) return String(b.year).localeCompare(String(a.year));
+    return (b.no || 0) - (a.no || 0);
+  });
+  
+  const managerName = managerFilter ? ` - ${managerFilter}` : '';
+  
+  let html = `
+    <div style="margin-bottom:1.5rem;">
+      <h3 style="font-size:1rem;margin-bottom:1rem;color:${themeColor};padding:0.5rem;background:${themeBgColor};border-radius:6px;">
+        📋 ${reportType}${managerName} 현장별 상세 내역 (${filteredData.length}건)
+      </h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+        <thead>
+          <tr style="background:${themeColor};color:white;">
+            <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};width:40px;">년도</th>
+            <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};width:40px;">NO</th>
+            <th style="padding:0.5rem;text-align:left;border:1px solid ${themeColor};min-width:150px;">공사현장</th>
+            <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};width:90px;">공사금액</th>
+            <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};width:90px;">지출총액</th>
+            <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};width:80px;">이익금</th>
+            <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};width:50px;">이익률</th>
+            <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};width:80px;">정산금액</th>
+            <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};width:50px;">담당자</th>
+            <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};width:50px;">정산</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filteredData.map(item => {
+            const profitColor = (item.profit || 0) >= 0 ? '#2e7d32' : '#c62828';
+            const settledColor = item.settled === '정산완료' ? '#2e7d32' : (item.settled === '진행중' ? '#1565c0' : '#e65100');
+            const settledBg = item.settled === '정산완료' ? '#c8e6c9' : (item.settled === '진행중' ? '#e3f2fd' : '#fff3e0');
+            return `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">${item.year || '-'}</td>
+                <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">${item.no || '-'}</td>
+                <td style="padding:0.4rem;border:1px solid #eee;font-weight:500;">${item.site || '-'}</td>
+                <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.amount)}</td>
+                <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.totalExpense)}</td>
+                <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;color:${profitColor};font-weight:600;">${fmt(item.profit)}</td>
+                <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">${item.profitRate ? (item.profitRate * 100).toFixed(1) : 10.0}%</td>
+                <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;color:${themeColor};font-weight:700;">${fmt(item.realSettlement)}</td>
+                <td style="padding:0.4rem;text-align:center;border:1px solid #eee;font-size:0.7rem;">${item.manager || '-'}</td>
+                <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">
+                  <span style="padding:0.15rem 0.4rem;border-radius:3px;font-size:0.65rem;background:${settledBg};color:${settledColor};">${item.settled || '미정산'}</span>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:${themeBgColor};font-weight:700;">
+            <td colspan="3" style="padding:0.5rem;border:1px solid #ddd;text-align:center;">합계 (${filteredData.length}건)</td>
+            <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(filteredData.reduce((s,i) => s + (i.amount || 0), 0))}</td>
+            <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(filteredData.reduce((s,i) => s + (i.totalExpense || 0), 0))}</td>
+            <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${filteredData.reduce((s,i) => s + (i.profit || 0), 0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:700;">${fmt(filteredData.reduce((s,i) => s + (i.profit || 0), 0))}</td>
+            <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${filteredData.reduce((s,i) => s + (i.amount || 0), 0) > 0 ? (filteredData.reduce((s,i) => s + (i.profit || 0), 0) / filteredData.reduce((s,i) => s + (i.amount || 0), 0) * 100).toFixed(1) : 0}%</td>
+            <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${themeColor};font-weight:700;">${fmt(filteredData.reduce((s,i) => s + (i.realSettlement || 0), 0))}</td>
+            <td colspan="2" style="padding:0.5rem;border:1px solid #ddd;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+  
+  return html;
 }
 
 // 본사 담당자별 미정산 내역 (24년/25년 분리)
