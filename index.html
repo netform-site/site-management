@@ -572,6 +572,7 @@ tr.selected { background: var(--primary-light); }
         </select>
         <div style="margin-left:auto;display:flex;gap:0.5rem;align-items:center;">
           <span id="consultingMainCount" style="font-size:0.85rem;color:#666;">0건</span>
+          <button class="btn btn-outline btn-sm" onclick="openTrashModal()" style="color:#ff9800;border-color:#ff9800;">🗑️ 휴지통</button>
           <button class="btn btn-success btn-sm" onclick="downloadConsultingListExcel()">📥 엑셀</button>
         </div>
       </div>
@@ -9157,9 +9158,62 @@ function syncConsultingToSettlement(item) {
   console.log('localStorage saved');
 }
 
-// 삭제
+// 휴지통 데이터
+let trashData = [];
+
+// 휴지통 로드
+function loadTrashData() {
+  try {
+    const saved = localStorage.getItem('trashData');
+    if (saved) {
+      trashData = JSON.parse(saved);
+    }
+  } catch(e) {
+    trashData = [];
+  }
+  // Firebase에서도 로드
+  loadTrashDataFromFirebase();
+}
+
+async function loadTrashDataFromFirebase() {
+  try {
+    const doc = await db.collection('appData').doc('trashData').get();
+    if (doc.exists && doc.data().data) {
+      trashData = doc.data().data;
+      localStorage.setItem('trashData', JSON.stringify(trashData));
+    }
+  } catch(e) {
+    console.error('Firebase trashData load error:', e);
+  }
+}
+
+async function saveTrashDataToFirebase() {
+  try {
+    await db.collection('appData').doc('trashData').set({
+      data: trashData,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) {
+    console.error('Firebase trashData save error:', e);
+  }
+}
+
+// 삭제 (휴지통으로 이동)
 function deleteConsultingListItem(id) {
-  if (!confirm('삭제하시겠습니까?')) return;
+  if (!confirm('삭제하시겠습니까?\n\n(휴지통에서 복구 가능합니다)')) return;
+  
+  // 삭제할 항목 찾기
+  const deletedItem = consultingListData.find(d => d.id === id);
+  if (deletedItem) {
+    // 휴지통에 추가
+    trashData.push({
+      ...deletedItem,
+      deletedAt: new Date().toISOString(),
+      type: 'consulting'
+    });
+    localStorage.setItem('trashData', JSON.stringify(trashData));
+    saveTrashDataToFirebase();
+  }
   
   consultingListData = consultingListData.filter(d => d.id !== id);
   localStorage.setItem('consultingListData', JSON.stringify(consultingListData));
@@ -9170,8 +9224,108 @@ function deleteConsultingListItem(id) {
   localStorage.setItem('consultingData', JSON.stringify(consultingData));
   saveConsultingDataToFirebase();
   
-  showToast('삭제되었습니다.', 'success');
+  showToast('삭제되었습니다. (휴지통에서 복구 가능)', 'success');
   renderConsultingMain();  // 메인 화면 새로고침
+}
+
+// 휴지통 모달 열기
+function openTrashModal() {
+  renderTrashList();
+  document.getElementById('trashModal').classList.add('active');
+}
+
+// 휴지통 모달 닫기
+function closeTrashModal() {
+  document.getElementById('trashModal').classList.remove('active');
+}
+
+// 휴지통 목록 렌더링
+function renderTrashList() {
+  const tbody = document.getElementById('trashTableBody');
+  if (!tbody) return;
+  
+  if (trashData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:#999;">휴지통이 비어있습니다.</td></tr>';
+    return;
+  }
+  
+  // 최신순 정렬
+  const sorted = [...trashData].sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+  
+  let html = '';
+  sorted.forEach((item, idx) => {
+    const deletedDate = new Date(item.deletedAt).toLocaleDateString('ko-KR');
+    html += `
+      <tr>
+        <td>${item.year || '-'}</td>
+        <td>${item.site || '-'}</td>
+        <td>${item.project || '-'}</td>
+        <td style="text-align:right;">${item.bidAmount ? item.bidAmount.toLocaleString() + '원' : '-'}</td>
+        <td>${deletedDate}</td>
+        <td style="text-align:center;">
+          <button onclick="restoreFromTrash('${item.id}')" style="padding:0.25rem 0.5rem;border:none;background:#4caf50;color:white;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:4px;">복구</button>
+          <button onclick="permanentDelete('${item.id}')" style="padding:0.25rem 0.5rem;border:none;background:#f44336;color:white;border-radius:4px;cursor:pointer;font-size:0.75rem;">영구삭제</button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  tbody.innerHTML = html;
+}
+
+// 복구
+function restoreFromTrash(id) {
+  const item = trashData.find(d => d.id === id);
+  if (!item) return;
+  
+  if (!confirm(`"${item.site}" 항목을 복구하시겠습니까?`)) return;
+  
+  // 휴지통에서 제거
+  trashData = trashData.filter(d => d.id !== id);
+  localStorage.setItem('trashData', JSON.stringify(trashData));
+  saveTrashDataToFirebase();
+  
+  // 원래 데이터에 복구
+  const { deletedAt, type, ...originalItem } = item;
+  consultingListData.push(originalItem);
+  localStorage.setItem('consultingListData', JSON.stringify(consultingListData));
+  saveConsultingListDataToFirebase();
+  
+  // 정산관리에도 동기화
+  syncConsultingToSettlement(originalItem);
+  
+  showToast('복구되었습니다.', 'success');
+  renderTrashList();
+  renderConsultingMain();
+}
+
+// 영구 삭제
+function permanentDelete(id) {
+  if (!confirm('영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!')) return;
+  
+  trashData = trashData.filter(d => d.id !== id);
+  localStorage.setItem('trashData', JSON.stringify(trashData));
+  saveTrashDataToFirebase();
+  
+  showToast('영구 삭제되었습니다.', 'info');
+  renderTrashList();
+}
+
+// 휴지통 비우기
+function emptyTrash() {
+  if (trashData.length === 0) {
+    showToast('휴지통이 비어있습니다.', 'info');
+    return;
+  }
+  
+  if (!confirm(`휴지통의 ${trashData.length}개 항목을 모두 영구 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다!`)) return;
+  
+  trashData = [];
+  localStorage.setItem('trashData', JSON.stringify(trashData));
+  saveTrashDataToFirebase();
+  
+  showToast('휴지통을 비웠습니다.', 'success');
+  renderTrashList();
 }
 
 // 엑셀 다운로드
@@ -9907,6 +10061,47 @@ function downloadReportExcel() {
   XLSX.writeFile(wb, `정산보고서_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('보고서 엑셀 다운로드 완료', 'success');
 }
+
+// 초기화 시 휴지통 로드
+document.addEventListener('DOMContentLoaded', function() {
+  loadTrashData();
+});
 </script>
+
+<!-- 휴지통 모달 -->
+<div class="modal" id="trashModal">
+  <div class="modal-content" style="max-width:800px;">
+    <div class="modal-header" style="background:linear-gradient(135deg, #ff9800, #f57c00);">
+      <div class="modal-title">🗑️ 휴지통</div>
+      <button class="modal-close" onclick="closeTrashModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#666;font-size:0.85rem;">삭제된 항목은 30일 후 자동 삭제됩니다.</span>
+        <button onclick="emptyTrash()" class="btn btn-danger btn-sm">🗑️ 휴지통 비우기</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>년도</th>
+              <th>공사현장</th>
+              <th>공사명</th>
+              <th class="text-right">낙찰금액</th>
+              <th>삭제일</th>
+              <th class="text-center">관리</th>
+            </tr>
+          </thead>
+          <tbody id="trashTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeTrashModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
