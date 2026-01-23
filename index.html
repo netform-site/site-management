@@ -6185,19 +6185,6 @@ async function handleBulkSummaryUpload(event) {
     error: []
   };
   
-  // 현재 연도 데이터
-  const yearData = allData[currentYear] || [];
-  
-  // 현장명별 인덱스 맵 생성 (동일 현장명 감지용)
-  const siteMap = {};
-  yearData.forEach((item, idx) => {
-    const siteName = item.site || '';
-    if (!siteMap[siteName]) {
-      siteMap[siteName] = [];
-    }
-    siteMap[siteName].push({ idx, item });
-  });
-  
   showToast(`${files.length}개 파일 처리 중...`, 'info');
   
   for (let i = 0; i < files.length; i++) {
@@ -6205,22 +6192,39 @@ async function handleBulkSummaryUpload(event) {
     const fileName = file.name;
     
     try {
-      // 파일명에서 현장명 추출: 300_25년_공사내역총괄표_[현장명]_날짜.xlsx
-      const match = fileName.match(/총괄표_(.+?)_\d+\.xlsx?$/i);
+      // 파일명에서 현장명과 년도 추출: 300_25년_공사내역총괄표_[현장명]_날짜.xlsx
+      const match = fileName.match(/(\d{2})년_.*총괄표_(.+?)_\d+\.xlsx?$/i);
       if (!match) {
         results.error.push({ fileName, reason: '파일명 형식 불일치' });
         continue;
       }
       
-      const extractedSiteName = match[1].trim();
+      const fileYear = '20' + match[1]; // 25 -> 2025
+      const extractedSiteName = match[2].trim();
       
-      // 현장 찾기 (부분 일치)
-      let matchedSites = [];
-      for (const siteName in siteMap) {
-        if (siteName.includes(extractedSiteName) || extractedSiteName.includes(siteName)) {
-          matchedSites.push(...siteMap[siteName].map(s => ({ ...s, siteName })));
-        }
+      console.log(`파일: ${fileName}, 년도: ${fileYear}, 현장명: ${extractedSiteName}`);
+      
+      // 해당 년도 데이터 가져오기
+      const yearData = allData[fileYear] || [];
+      if (yearData.length === 0) {
+        results.notFound.push({ fileName, extractedSiteName, reason: `${fileYear}년 데이터 없음` });
+        continue;
       }
+      
+      // 현장 찾기 (부분 일치 - site와 name 모두 검색)
+      let matchedSites = [];
+      yearData.forEach((item, idx) => {
+        const siteName = item.site || item.name || '';
+        const itemName = item.name || item.site || '';
+        
+        // 파일명 현장명이 공사현황 현장명에 포함되거나, 반대의 경우
+        if (siteName.includes(extractedSiteName) || extractedSiteName.includes(siteName) ||
+            itemName.includes(extractedSiteName) || extractedSiteName.includes(itemName)) {
+          matchedSites.push({ idx, item, siteName: siteName || itemName });
+        }
+      });
+      
+      console.log(`매칭 결과: ${matchedSites.length}건`);
       
       if (matchedSites.length === 0) {
         results.notFound.push({ fileName, extractedSiteName });
@@ -6238,7 +6242,7 @@ async function handleBulkSummaryUpload(event) {
       const targetItem = matchedSites[0].item;
       
       // 이미 데이터가 있는지 확인
-      const key = `${currentYear}_${targetItem.no}`;
+      const key = `${fileYear}_${targetItem.no}`;
       let hasExistingData = false;
       
       // 전역 detailData에서 확인
@@ -6252,17 +6256,17 @@ async function handleBulkSummaryUpload(event) {
       }
       
       if (hasExistingData) {
-        results.skipped.push({ fileName, extractedSiteName, siteName: targetItem.site, reason: 'exists' });
+        results.skipped.push({ fileName, extractedSiteName, siteName: targetItem.site || targetItem.name, reason: 'exists' });
         continue;
       }
       
       // 엑셀 파일 읽기
       const data = await readExcelFile(file);
       
-      // 해당 현장의 상세 데이터 파싱 및 저장
-      await processBulkSummaryData(targetIdx, targetItem, data, fileName);
+      // 해당 현장의 상세 데이터 파싱 및 저장 (년도 정보 전달)
+      await processBulkSummaryData(targetIdx, targetItem, data, fileName, fileYear);
       
-      results.success.push({ fileName, siteName: targetItem.site });
+      results.success.push({ fileName, siteName: targetItem.site || targetItem.name });
       
     } catch (e) {
       console.error('파일 처리 오류:', fileName, e);
@@ -6301,11 +6305,12 @@ function readExcelFile(file) {
   });
 }
 
-async function processBulkSummaryData(idx, item, data, fileName) {
+async function processBulkSummaryData(idx, item, data, fileName, fileYear) {
   // 기존 detailData 가져오기 또는 초기화
-  const key = `${currentYear}_${item.no}`;
+  const year = fileYear || currentYear;
+  const key = `${year}_${item.no}`;
   console.log('=== processBulkSummaryData 시작 ===');
-  console.log('key:', key);
+  console.log('key:', key, 'year:', year);
   
   // 전역 detailData 객체 사용
   let detail = detailData[key] || {};
@@ -6321,6 +6326,12 @@ async function processBulkSummaryData(idx, item, data, fileName) {
   // 전역 detailData에 저장
   detailData[key] = detail;
   console.log('detailData[key] 저장 완료');
+  
+  // allData에도 details 저장 (정산관리에서 사용)
+  if (allData[year] && allData[year][idx]) {
+    allData[year][idx].details = parsed;
+    console.log('allData에 details 저장 완료');
+  }
 }
 
 function parseBulkSummarySheet(data, item) {
