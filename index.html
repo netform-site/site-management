@@ -862,27 +862,22 @@ tr.selected { background: var(--primary-light); }
       
       <!-- 정산 테이블 -->
       <div style="overflow-x:auto;">
-        <table class="settlement-table" id="settlementTable">
+        <table class="settlement-table" id="settlementTable" style="font-size:0.72rem;">
           <thead>
             <tr>
-              <th style="width:40px;">년도</th>
-              <th style="width:50px;">NO</th>
-              <th style="width:50px;">구분</th>
-              <th style="width:55px;">공사종류</th>
-              <th style="min-width:130px;">공사현장</th>
-              <th style="width:90px;">공사금액</th>
-              <th style="width:55px;">입금</th>
-              <th style="width:70px;">입금일</th>
-              <th style="width:80px;">자재비</th>
-              <th style="width:80px;">노무비</th>
-              <th style="width:80px;">경비합계</th>
-              <th style="width:90px;">지출총액</th>
-              <th style="width:90px;">이익금</th>
-              <th style="width:50px;">이익률</th>
-              <th style="width:90px;">정산금액<br>(15%)</th>
-              <th style="width:90px;">회사수익<br>(85%)</th>
-              <th style="width:55px;">담당자</th>
-              <th style="width:55px;">정산</th>
+              <th style="width:30px;padding:0.4rem 0.2rem;">년도</th>
+              <th style="width:35px;padding:0.4rem 0.2rem;">NO</th>
+              <th style="width:35px;padding:0.4rem 0.2rem;">구분</th>
+              <th style="min-width:100px;padding:0.4rem 0.3rem;">공사현장</th>
+              <th style="width:75px;padding:0.4rem 0.2rem;">공사금액</th>
+              <th style="width:40px;padding:0.4rem 0.2rem;">입금</th>
+              <th style="width:70px;padding:0.4rem 0.2rem;">지출총액</th>
+              <th style="width:70px;padding:0.4rem 0.2rem;">이익금</th>
+              <th style="width:35px;padding:0.4rem 0.2rem;">이익률</th>
+              <th style="width:70px;padding:0.4rem 0.2rem;">정산금액</th>
+              <th style="width:70px;padding:0.4rem 0.2rem;">회사수익</th>
+              <th style="width:45px;padding:0.4rem 0.2rem;">담당자</th>
+              <th style="width:50px;padding:0.4rem 0.2rem;">정산</th>
             </tr>
           </thead>
           <tbody id="settlementTableBody">
@@ -7437,7 +7432,7 @@ function renderSettlementTable() {
     } else if (settledValue === '진행중') {
       bgColor = '#e3f2fd'; txtColor = '#1565c0'; // 파랑
     }
-    const settledSelect = `<select onchange="updateSettlementStatus('${item.year}', '${item.no}', this.value)" style="font-size:0.7rem;padding:2px 4px;border-radius:4px;border:1px solid #ddd;background:${bgColor};color:${txtColor};font-weight:600;cursor:pointer;">
+    const settledSelect = `<select onchange="updateSettlementStatus('${item.year}', '${item.no}', this.value)" style="font-size:0.65rem;padding:1px 2px;border-radius:3px;border:1px solid #ddd;background:${bgColor};color:${txtColor};font-weight:600;cursor:pointer;">
       <option value="미정산" ${settledValue === '미정산' ? 'selected' : ''}>미정산</option>
       <option value="진행중" ${settledValue === '진행중' ? 'selected' : ''}>진행중</option>
       <option value="정산완료" ${settledValue === '정산완료' ? 'selected' : ''}>정산완료</option>
@@ -7446,33 +7441,27 @@ function renderSettlementTable() {
     // 본사/외주 구분
     const isExt = item.hqType === '외주' || (item.type && item.type.includes('(외)'));
     const hqTypeBadge = isExt 
-      ? '<span style="background:#e1bee7;color:#7b1fa2;padding:2px 5px;border-radius:4px;font-size:0.65rem;font-weight:600;">외주</span>'
-      : '<span style="background:#bbdefb;color:#1565c0;padding:2px 5px;border-radius:4px;font-size:0.65rem;font-weight:600;">본사</span>';
+      ? '<span style="background:#e1bee7;color:#7b1fa2;padding:1px 3px;border-radius:3px;font-size:0.6rem;">외주</span>'
+      : '<span style="background:#bbdefb;color:#1565c0;padding:1px 3px;border-radius:3px;font-size:0.6rem;">본사</span>';
     
-    // 총괄표 데이터 유무 표시
-    const dataIcon = item.hasDetailData 
-      ? '<span title="총괄표 데이터 있음" style="color:#66bb6a;">✓</span>' 
-      : '<span title="총괄표 데이터 없음 (추정치)" style="color:#bdbdbd;">~</span>';
+    // 입금 상태 간소화
+    const statusShort = item.status ? (item.status.includes('입금') ? '✓' : '-') : '-';
+    const statusColor = item.status && item.status.includes('입금') ? '#4caf50' : '#999';
     
-    html += `<tr class="${statusClass}">
-      <td>${item.year || '-'}</td>
-      <td>${item.no || (idx + 1)} ${dataIcon}</td>
-      <td>${hqTypeBadge}</td>
-      <td>${item.type || '-'}</td>
-      <td title="${item.site}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.site || '-'}</td>
-      <td>${fmt(item.amount)}</td>
-      <td>${item.status || '-'}</td>
-      <td style="font-size:0.7rem;">${item.paidDate || '-'}</td>
-      <td>${fmt(item.material)}</td>
-      <td>${fmt(item.laborTotal || item.labor)}</td>
-      <td>${fmt(item.expenseTotal)}</td>
-      <td>${fmt(item.totalExpense)}</td>
-      <td class="${profitClass}">${fmt(item.profit)}</td>
-      <td class="${profitClass}">${item.profitRate ? (item.profitRate * 100).toFixed(1) + '%' : '-'}</td>
-      <td style="color:#1565c0;font-weight:700;background:#e3f2fd;">${fmt(item.realSettlement)}</td>
-      <td style="color:#2e7d32;font-weight:600;">${fmt(item.companyProfit)}</td>
-      <td style="font-size:0.72rem;">${item.manager || '-'}</td>
-      <td>${settledSelect}</td>
+    html += `<tr class="${statusClass}" style="font-size:0.7rem;">
+      <td style="padding:0.3rem 0.2rem;">${item.year || '-'}</td>
+      <td style="padding:0.3rem 0.2rem;">${item.no || (idx + 1)}</td>
+      <td style="padding:0.3rem 0.2rem;">${hqTypeBadge}</td>
+      <td title="${item.site}" style="padding:0.3rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-family:inherit;">${item.site || '-'}</td>
+      <td style="padding:0.3rem 0.2rem;">${fmt(item.amount)}</td>
+      <td style="padding:0.3rem 0.2rem;color:${statusColor};font-weight:600;">${statusShort}</td>
+      <td style="padding:0.3rem 0.2rem;">${fmt(item.totalExpense)}</td>
+      <td class="${profitClass}" style="padding:0.3rem 0.2rem;">${fmt(item.profit)}</td>
+      <td class="${profitClass}" style="padding:0.3rem 0.2rem;font-size:0.65rem;">${item.profitRate ? (item.profitRate * 100).toFixed(1) + '%' : '-'}</td>
+      <td style="padding:0.3rem 0.2rem;color:#1565c0;font-weight:700;background:#e3f2fd;">${fmt(item.realSettlement)}</td>
+      <td style="padding:0.3rem 0.2rem;color:#2e7d32;font-weight:600;">${fmt(item.companyProfit)}</td>
+      <td style="padding:0.3rem 0.2rem;font-size:0.65rem;">${item.manager || '-'}</td>
+      <td style="padding:0.3rem 0.2rem;">${settledSelect}</td>
     </tr>`;
     
     totals.amount += item.amount || 0;
@@ -7499,42 +7488,40 @@ function renderSettlementTable() {
     }
   });
   
-  document.getElementById('settlementTableBody').innerHTML = html || '<tr><td colspan="18" style="text-align:center;color:var(--gray-400);padding:2rem;">데이터가 없습니다. 정산리스트를 업로드하세요.</td></tr>';
+  document.getElementById('settlementTableBody').innerHTML = html || '<tr><td colspan="13" style="text-align:center;color:var(--gray-400);padding:2rem;">데이터가 없습니다. 정산리스트를 업로드하세요.</td></tr>';
   
   // 합계 행
   const avgProfitRate = totals.amount > 0 ? (totals.profit / totals.amount * 100).toFixed(1) : 0;
   document.getElementById('settlementTableFoot').innerHTML = `
-    <tr style="background:#e3f2fd;">
-      <td colspan="5" style="text-align:center;">본사 소계 (${hqTotals.count}건)</td>
-      <td>${fmt(hqTotals.amount)}</td>
-      <td colspan="6">-</td>
-      <td class="${hqTotals.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmt(hqTotals.profit)}</td>
+    <tr style="background:#e3f2fd;font-size:0.7rem;">
+      <td colspan="4" style="text-align:center;padding:0.4rem;">본사 소계 (${hqTotals.count}건)</td>
+      <td style="padding:0.4rem;">${fmt(hqTotals.amount)}</td>
       <td>-</td>
-      <td style="color:var(--primary);font-weight:700;">${fmt(hqTotals.realSettlement)}</td>
+      <td>-</td>
+      <td class="${hqTotals.profit >= 0 ? 'profit-positive' : 'profit-negative'}" style="padding:0.4rem;">${fmt(hqTotals.profit)}</td>
+      <td>-</td>
+      <td style="color:var(--primary);font-weight:700;padding:0.4rem;">${fmt(hqTotals.realSettlement)}</td>
       <td colspan="3">-</td>
     </tr>
-    <tr style="background:#f3e5f5;">
-      <td colspan="5" style="text-align:center;">외주 소계 (${extTotals.count}건)</td>
-      <td>${fmt(extTotals.amount)}</td>
-      <td colspan="6">-</td>
-      <td class="${extTotals.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmt(extTotals.profit)}</td>
+    <tr style="background:#f3e5f5;font-size:0.7rem;">
+      <td colspan="4" style="text-align:center;padding:0.4rem;">외주 소계 (${extTotals.count}건)</td>
+      <td style="padding:0.4rem;">${fmt(extTotals.amount)}</td>
       <td>-</td>
-      <td style="color:#9c27b0;font-weight:700;">${fmt(extTotals.realSettlement)}</td>
+      <td>-</td>
+      <td class="${extTotals.profit >= 0 ? 'profit-positive' : 'profit-negative'}" style="padding:0.4rem;">${fmt(extTotals.profit)}</td>
+      <td>-</td>
+      <td style="color:#9c27b0;font-weight:700;padding:0.4rem;">${fmt(extTotals.realSettlement)}</td>
       <td colspan="3">-</td>
     </tr>
-    <tr>
-      <td colspan="5" style="text-align:center;font-weight:700;">총 합계 (${totals.count}건)</td>
-      <td>${fmt(totals.amount)}</td>
+    <tr style="font-size:0.7rem;">
+      <td colspan="4" style="text-align:center;font-weight:700;padding:0.4rem;">총 합계 (${totals.count}건)</td>
+      <td style="padding:0.4rem;">${fmt(totals.amount)}</td>
       <td>-</td>
-      <td>-</td>
-      <td>${fmt(totals.material)}</td>
-      <td>${fmt(totals.laborTotal)}</td>
-      <td>${fmt(totals.expenseTotal)}</td>
-      <td>${fmt(totals.totalExpense)}</td>
-      <td class="${totals.profit >= 0 ? 'profit-positive' : 'profit-negative'}">${fmt(totals.profit)}</td>
-      <td>${avgProfitRate}%</td>
-      <td style="color:var(--primary);font-weight:700;">${fmt(totals.realSettlement)}</td>
-      <td>${fmt(totals.companyProfit)}</td>
+      <td style="padding:0.4rem;">${fmt(totals.totalExpense)}</td>
+      <td class="${totals.profit >= 0 ? 'profit-positive' : 'profit-negative'}" style="padding:0.4rem;">${fmt(totals.profit)}</td>
+      <td style="padding:0.4rem;">${avgProfitRate}%</td>
+      <td style="color:var(--primary);font-weight:700;padding:0.4rem;">${fmt(totals.realSettlement)}</td>
+      <td style="padding:0.4rem;">${fmt(totals.companyProfit)}</td>
       <td>-</td>
       <td>-</td>
     </tr>
