@@ -1424,23 +1424,28 @@ tr.selected { background: var(--primary-light); }
     </div>
     <div class="modal-body">
       <!-- 필터 -->
-      <div style="margin-bottom:1rem;padding:1rem;background:#fff3e0;border-radius:8px;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+      <div style="margin-bottom:1rem;padding:1rem;background:#fff3e0;border-radius:8px;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
         <label style="font-weight:600;color:#333;">👤 담당자:</label>
-        <select id="confirmManagerFilter" onchange="renderConfirmationPreview()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+        <select id="confirmManagerFilter" onchange="renderConfirmationPreview()" style="padding:0.4rem 0.75rem;border:1px solid #ddd;border-radius:6px;font-size:0.85rem;">
           <option value="">-- 담당자 선택 --</option>
         </select>
-        <label style="font-weight:600;color:#333;margin-left:1rem;">📅 년도:</label>
-        <select id="confirmYearFilter" onchange="renderConfirmationPreview()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+        <label style="font-weight:600;color:#333;margin-left:0.5rem;">📅 년도:</label>
+        <select id="confirmYearFilter" onchange="renderConfirmationPreview()" style="padding:0.4rem 0.75rem;border:1px solid #ddd;border-radius:6px;font-size:0.85rem;">
           <option value="">전체 년도</option>
           <option value="2024">2024년</option>
           <option value="2025">2025년</option>
           <option value="2024+2025">24년+25년</option>
         </select>
-        <label style="font-weight:600;color:#333;margin-left:1rem;">📋 구분:</label>
-        <select id="confirmTypeFilter" onchange="renderConfirmationPreview()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
-          <option value="전체">전체 (공사+컨설팅)</option>
-          <option value="공사">공사현황만</option>
-          <option value="컨설팅">기술컨설팅만</option>
+        <label style="font-weight:600;color:#333;margin-left:0.5rem;">📋 구분:</label>
+        <select id="confirmTypeFilter" onchange="renderConfirmationPreview()" style="padding:0.4rem 0.75rem;border:1px solid #ddd;border-radius:6px;font-size:0.85rem;">
+          <option value="전체">전체</option>
+          <option value="공사">공사</option>
+          <option value="컨설팅">컨설팅</option>
+        </select>
+        <label style="font-weight:600;color:#333;margin-left:0.5rem;">💰 입금:</label>
+        <select id="confirmPaidFilter" onchange="renderConfirmationPreview()" style="padding:0.4rem 0.75rem;border:1px solid #ddd;border-radius:6px;font-size:0.85rem;background:#e8f5e9;">
+          <option value="입금완료">입금완료만</option>
+          <option value="전체">전체 (미입금 포함)</option>
         </select>
       </div>
       <div id="confirmationPreview"></div>
@@ -8228,6 +8233,7 @@ function renderConfirmationPreview() {
   const managerFilter = document.getElementById('confirmManagerFilter').value;
   const yearFilter = document.getElementById('confirmYearFilter').value;
   const typeFilter = document.getElementById('confirmTypeFilter').value;
+  const paidFilter = document.getElementById('confirmPaidFilter').value;
   
   if (!managerFilter) {
     document.getElementById('confirmationPreview').innerHTML = `
@@ -8254,6 +8260,11 @@ function renderConfirmationPreview() {
       data = data.filter(d => String(d.year).includes('24') || String(d.year).includes('25'));
     }
     
+    // 입금 상태 필터 (입금완료만 or 전체)
+    if (paidFilter === '입금완료') {
+      data = data.filter(d => d.status && d.status.includes('입금'));
+    }
+    
     // 정산완료 제외 (미정산 건만)
     data = data.filter(d => d.settled !== '정산완료');
     constData = data;
@@ -8273,6 +8284,10 @@ function renderConfirmationPreview() {
       data = data.filter(d => d.year === '2024' || d.year === '2025');
     }
     
+    // 입금 상태 필터 (기술컨설팅은 status 필드 확인)
+    if (paidFilter === '입금완료') {
+      data = data.filter(d => d.status && d.status.includes('입금'));
+    }
     // 정산완료 제외
     data = data.filter(d => d.settled !== '정산완료');
     consultData = data;
@@ -8366,23 +8381,30 @@ function renderConfirmationPreview() {
           <tr style="background:#e3f2fd;">
             <th style="padding:0.35rem;border:1px solid #ddd;width:35px;">NO</th>
             <th style="padding:0.35rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">공사금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">지출금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">정산금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:50px;">입금</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">공사금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">지출금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">정산금액</th>
           </tr>
         </thead>
         <tbody>
-          ${const24.map(item => `
+          ${const24.map(item => {
+            const isPaid = item.status && item.status.includes('입금');
+            const statusBg = isPaid ? '#c8e6c9' : '#ffcdd2';
+            const statusColor = isPaid ? '#2e7d32' : '#c62828';
+            const statusText = isPaid ? '입금' : '미입금';
+            return `
             <tr>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;"><span style="padding:0.1rem 0.3rem;background:${statusBg};color:${statusColor};border-radius:3px;font-size:0.65rem;">${statusText}</span></td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(item.totalExpense)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;font-weight:600;">${fmt(item.realSettlement)}</td>
             </tr>
-          `).join('')}
+          `;}).join('')}
           <tr style="background:#e3f2fd;font-weight:600;">
-            <td colspan="2" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${const24.length}건)</td>
+            <td colspan="3" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${const24.length}건)</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(total24Amount)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(total24Expense)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;">${fmt(total24Settlement)}</td>
@@ -8404,23 +8426,30 @@ function renderConfirmationPreview() {
           <tr style="background:#e3f2fd;">
             <th style="padding:0.35rem;border:1px solid #ddd;width:35px;">NO</th>
             <th style="padding:0.35rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">공사금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">지출금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">정산금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:50px;">입금</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">공사금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">지출금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">정산금액</th>
           </tr>
         </thead>
         <tbody>
-          ${const25.map(item => `
+          ${const25.map(item => {
+            const isPaid = item.status && item.status.includes('입금');
+            const statusBg = isPaid ? '#c8e6c9' : '#ffcdd2';
+            const statusColor = isPaid ? '#2e7d32' : '#c62828';
+            const statusText = isPaid ? '입금' : '미입금';
+            return `
             <tr>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;"><span style="padding:0.1rem 0.3rem;background:${statusBg};color:${statusColor};border-radius:3px;font-size:0.65rem;">${statusText}</span></td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(item.totalExpense)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;font-weight:600;">${fmt(item.realSettlement)}</td>
             </tr>
-          `).join('')}
+          `;}).join('')}
           <tr style="background:#e3f2fd;font-weight:600;">
-            <td colspan="2" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${const25.length}건)</td>
+            <td colspan="3" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${const25.length}건)</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(total25Amount)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(total25Expense)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;">${fmt(total25Settlement)}</td>
@@ -8442,23 +8471,30 @@ function renderConfirmationPreview() {
           <tr style="background:#e0f2f1;">
             <th style="padding:0.35rem;border:1px solid #ddd;width:45px;">구분</th>
             <th style="padding:0.35rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">낙찰금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">지출금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">정산금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:50px;">입금</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">낙찰금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">지출금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">정산금액</th>
           </tr>
         </thead>
         <tbody>
-          ${consult24.map(item => `
+          ${consult24.map(item => {
+            const isPaid = item.status && item.status.includes('입금');
+            const statusBg = isPaid ? '#c8e6c9' : '#ffcdd2';
+            const statusColor = isPaid ? '#2e7d32' : '#c62828';
+            const statusText = isPaid ? '입금' : '미입금';
+            return `
             <tr>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;font-size:0.7rem;">${item.type || '-'}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;"><span style="padding:0.1rem 0.3rem;background:${statusBg};color:${statusColor};border-radius:3px;font-size:0.65rem;">${statusText}</span></td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.bidAmount)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(item.totalExpense)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;font-weight:600;">${fmt(item.settlement)}</td>
             </tr>
-          `).join('')}
+          `;}).join('')}
           <tr style="background:#e0f2f1;font-weight:600;">
-            <td colspan="2" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${consult24.length}건)</td>
+            <td colspan="3" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${consult24.length}건)</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(total24Amount)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(total24Expense)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;">${fmt(total24Settlement)}</td>
@@ -8480,23 +8516,30 @@ function renderConfirmationPreview() {
           <tr style="background:#e0f2f1;">
             <th style="padding:0.35rem;border:1px solid #ddd;width:45px;">구분</th>
             <th style="padding:0.35rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">낙찰금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">지출금액</th>
-            <th style="padding:0.35rem;border:1px solid #ddd;width:80px;text-align:right;">정산금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:50px;">입금</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">낙찰금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">지출금액</th>
+            <th style="padding:0.35rem;border:1px solid #ddd;width:75px;text-align:right;">정산금액</th>
           </tr>
         </thead>
         <tbody>
-          ${consult25.map(item => `
+          ${consult25.map(item => {
+            const isPaid = item.status && item.status.includes('입금');
+            const statusBg = isPaid ? '#c8e6c9' : '#ffcdd2';
+            const statusColor = isPaid ? '#2e7d32' : '#c62828';
+            const statusText = isPaid ? '입금' : '미입금';
+            return `
             <tr>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;font-size:0.7rem;">${item.type || '-'}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;"><span style="padding:0.1rem 0.3rem;background:${statusBg};color:${statusColor};border-radius:3px;font-size:0.65rem;">${statusText}</span></td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.bidAmount)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(item.totalExpense)}</td>
               <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;font-weight:600;">${fmt(item.settlement)}</td>
             </tr>
-          `).join('')}
+          `;}).join('')}
           <tr style="background:#e0f2f1;font-weight:600;">
-            <td colspan="2" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${consult25.length}건)</td>
+            <td colspan="3" style="padding:0.35rem;border:1px solid #ddd;text-align:center;">소계 (${consult25.length}건)</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(total25Amount)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#666;">${fmt(total25Expense)}</td>
             <td style="padding:0.35rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;">${fmt(total25Settlement)}</td>
