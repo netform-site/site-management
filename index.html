@@ -10538,14 +10538,24 @@ function printReport() {
           font-weight: 600 !important;
         }
         
-        /* 총합계 박스 */
+        /* 총합계 박스 - 검은 배경 흰 글씨 */
+        [style*="background:#374151"],
         [style*="background:var(--gray-700)"],
         [style*="background:#455a64"] {
-          background: #37474f !important;
-          color: white !important;
+          background: #374151 !important;
+          color: #ffffff !important;
           padding: 15px !important;
           border-radius: 6px;
           margin: 15px 0;
+        }
+        
+        [style*="background:#374151"] div,
+        [style*="background:#374151"] span {
+          color: #ffffff !important;
+        }
+        
+        [style*="color:#e0e0e0"] {
+          color: #cccccc !important;
         }
         
         /* 미정산 내역 박스 */
@@ -10573,6 +10583,7 @@ function printReport() {
             padding: 15px 20px; 
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
           
           @page {
@@ -10584,6 +10595,17 @@ function printReport() {
           h3 { font-size: 12px !important; }
           table { font-size: 9px; }
           th, td { padding: 4px 5px !important; }
+          
+          /* 총합계 박스 인쇄 */
+          [style*="background:#374151"] {
+            background: #374151 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          [style*="background:#374151"] div {
+            color: #ffffff !important;
+          }
           
           /* 페이지 나눔 방지 */
           tr { page-break-inside: avoid; }
