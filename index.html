@@ -996,6 +996,7 @@ tr.selected { background: var(--primary-light); }
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="bulkSetSettlementStatus()" style="background:#ff5722;color:white;">🔄 일괄 정산상태 설정</button>
+      <button class="btn" onclick="openPaymentModal()" style="background:#4caf50;color:white;">💰 정산 지급</button>
       <button class="btn btn-outline" onclick="closeSettlementModal()">닫기</button>
       <button class="btn" onclick="openEmailManageModal()" style="background:#607d8b;color:white;">⚙️ 이메일 관리</button>
       <button class="btn btn-warning" onclick="openConfirmationModal()" style="background:#ff9800;color:white;">📄 담당자 확인서</button>
@@ -1003,6 +1004,101 @@ tr.selected { background: var(--primary-light); }
       <button class="btn" onclick="openReportModal('외주')" style="background:#9c27b0;color:white;">📋 외주 보고서</button>
       <button class="btn" onclick="openIntegratedReportModal()" style="background:#e91e63;color:white;">📊 통합 보고서</button>
       <button class="btn btn-success" onclick="downloadSettlementExcel()">📥 엑셀 다운로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- 정산 지급 모달 -->
+<div class="modal" id="paymentModal">
+  <div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header" style="background:#4caf50;color:white;">
+      <div class="modal-title">💰 정산 지급 처리</div>
+      <button class="modal-close" onclick="closePaymentModal()" style="color:white;">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 담당자 및 지급정보 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;padding:1rem;background:#e8f5e9;border-radius:8px;">
+        <div>
+          <label style="font-size:0.85rem;color:#666;display:block;margin-bottom:0.25rem;">담당자 선택 *</label>
+          <select id="paymentManager" onchange="loadPaymentTargets()" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+            <option value="">-- 담당자 선택 --</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.85rem;color:#666;display:block;margin-bottom:0.25rem;">지급일자 *</label>
+          <input type="date" id="paymentDate" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+        </div>
+        <div>
+          <label style="font-size:0.85rem;color:#666;display:block;margin-bottom:0.25rem;">지급구분</label>
+          <select id="paymentType" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+            <option value="공사">공사현황</option>
+            <option value="컨설팅">기술컨설팅</option>
+            <option value="전체">전체</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- 지급 대상 목록 -->
+      <div style="margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h4 style="color:#2e7d32;">📋 지급 대상 현장 (미정산)</h4>
+          <div>
+            <button onclick="selectAllPaymentTargets(true)" style="padding:0.3rem 0.6rem;border:1px solid #4caf50;background:white;color:#4caf50;border-radius:4px;cursor:pointer;font-size:0.75rem;margin-right:0.25rem;">전체선택</button>
+            <button onclick="selectAllPaymentTargets(false)" style="padding:0.3rem 0.6rem;border:1px solid #999;background:white;color:#666;border-radius:4px;cursor:pointer;font-size:0.75rem;">선택해제</button>
+          </div>
+        </div>
+        <div id="paymentTargetList" style="max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;">
+          <p style="padding:2rem;text-align:center;color:#999;">담당자를 선택하세요</p>
+        </div>
+      </div>
+      
+      <!-- 지급 요약 -->
+      <div id="paymentSummary" style="display:none;padding:1rem;background:#fff3e0;border-radius:8px;border:1px solid #ffcc80;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;text-align:center;">
+          <div>
+            <div style="font-size:0.8rem;color:#666;">선택 건수</div>
+            <div id="paymentSelectedCount" style="font-size:1.5rem;font-weight:700;color:#e65100;">0건</div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:#666;">총 지급 금액</div>
+            <div id="paymentTotalAmount" style="font-size:1.5rem;font-weight:700;color:#4caf50;">0원</div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:#666;">담당자</div>
+            <div id="paymentManagerName" style="font-size:1.5rem;font-weight:700;color:#1565c0;">-</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 비고 -->
+      <div style="margin-top:1rem;">
+        <label style="font-size:0.85rem;color:#666;display:block;margin-bottom:0.25rem;">비고 (메모)</label>
+        <input type="text" id="paymentMemo" placeholder="예: 2025년 1월 정산 지급" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:4px;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePaymentModal()">취소</button>
+      <button class="btn" onclick="viewPaymentHistory()" style="background:#607d8b;color:white;">📜 지급 이력</button>
+      <button class="btn btn-success" onclick="processPayment()">💰 정산 지급 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- 지급 이력 모달 -->
+<div class="modal" id="paymentHistoryModal">
+  <div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header" style="background:#607d8b;color:white;">
+      <div class="modal-title">📜 정산 지급 이력</div>
+      <button class="modal-close" onclick="closePaymentHistoryModal()" style="color:white;">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="paymentHistoryContent">
+        <p style="padding:2rem;text-align:center;color:#999;">지급 이력을 불러오는 중...</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePaymentHistoryModal()">닫기</button>
+      <button class="btn btn-success" onclick="downloadPaymentHistoryExcel()">📥 엑셀 다운로드</button>
     </div>
   </div>
 </div>
@@ -2311,6 +2407,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadManagerEmails();  // 담당자 이메일 로드
   loadConsultingData();  // 기술컨설팅 정산 데이터 로드
   loadConsultingListData();  // 기술컨설팅 현장 리스트 로드
+  loadPaymentHistory();  // 정산 지급 이력 로드
 });
 
 function initYearTabs() {
@@ -9753,6 +9850,481 @@ function downloadIntegratedReportExcel() {
   
   const fileName = `통합실적_보고서_${managerFilter || '전체'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
+  showToast('엑셀 파일이 다운로드되었습니다.', 'success');
+}
+
+// ========== 정산 지급 처리 ==========
+let paymentHistory = [];
+let paymentTargets = [];
+
+// 정산 지급 모달 열기
+function openPaymentModal() {
+  document.getElementById('paymentModal').style.display = 'flex';
+  
+  // 오늘 날짜 설정
+  document.getElementById('paymentDate').value = new Date().toISOString().slice(0, 10);
+  
+  // 담당자 목록 로드
+  const constructionData = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+  const constManagers = [...new Set(constructionData.filter(d => d.settled !== '정산완료').map(d => d.manager).filter(m => m))];
+  const consultManagers = [...new Set(consultingData.filter(d => d.settled !== '정산완료').map(d => d.manager).filter(m => m))];
+  const allManagers = [...new Set([...constManagers, ...consultManagers])].sort();
+  
+  const select = document.getElementById('paymentManager');
+  select.innerHTML = '<option value="">-- 담당자 선택 --</option>';
+  allManagers.forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  
+  // 초기화
+  document.getElementById('paymentTargetList').innerHTML = '<p style="padding:2rem;text-align:center;color:#999;">담당자를 선택하세요</p>';
+  document.getElementById('paymentSummary').style.display = 'none';
+  document.getElementById('paymentMemo').value = '';
+  
+  // 지급 이력 로드
+  loadPaymentHistory();
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').style.display = 'none';
+}
+
+// 지급 대상 로드
+function loadPaymentTargets() {
+  const manager = document.getElementById('paymentManager').value;
+  const paymentType = document.getElementById('paymentType').value;
+  
+  if (!manager) {
+    document.getElementById('paymentTargetList').innerHTML = '<p style="padding:2rem;text-align:center;color:#999;">담당자를 선택하세요</p>';
+    document.getElementById('paymentSummary').style.display = 'none';
+    return;
+  }
+  
+  paymentTargets = [];
+  
+  // 공사현황 데이터
+  if (paymentType === '공사' || paymentType === '전체') {
+    const constructionData = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+    const constTargets = constructionData.filter(d => d.manager === manager && d.settled !== '정산완료');
+    constTargets.forEach(item => {
+      paymentTargets.push({
+        type: '공사',
+        id: `${item.year}_${item.no}`,
+        year: item.year,
+        no: item.no,
+        site: item.site,
+        amount: item.amount || 0,
+        profit: item.profit || 0,
+        settlement: item.realSettlement || 0,
+        status: item.settled || '미정산'
+      });
+    });
+  }
+  
+  // 기술컨설팅 데이터
+  if (paymentType === '컨설팅' || paymentType === '전체') {
+    const consultTargets = consultingData.filter(d => d.manager === manager && d.settled !== '정산완료');
+    consultTargets.forEach(item => {
+      paymentTargets.push({
+        type: '컨설팅',
+        id: item.id,
+        year: item.year,
+        site: item.site,
+        amount: item.bidAmount || 0,
+        profit: item.profit || 0,
+        settlement: item.settlement || 0,
+        status: item.settled || '미정산'
+      });
+    });
+  }
+  
+  // 리스트 렌더링
+  if (paymentTargets.length === 0) {
+    document.getElementById('paymentTargetList').innerHTML = '<p style="padding:2rem;text-align:center;color:#999;">미정산 현장이 없습니다</p>';
+    document.getElementById('paymentSummary').style.display = 'none';
+    return;
+  }
+  
+  let html = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+      <thead>
+        <tr style="background:#e8f5e9;">
+          <th style="padding:0.5rem;border:1px solid #ddd;width:40px;">
+            <input type="checkbox" id="selectAllPayment" onchange="selectAllPaymentTargets(this.checked)" checked>
+          </th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:60px;">구분</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:45px;">년도</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;">현장명</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:90px;">금액</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:80px;">이익금</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:80px;">정산금액</th>
+          <th style="padding:0.5rem;border:1px solid #ddd;width:60px;">상태</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  paymentTargets.forEach((item, idx) => {
+    const typeBg = item.type === '공사' ? '#e3f2fd' : '#e0f2f1';
+    const typeColor = item.type === '공사' ? '#1565c0' : '#00897b';
+    const statusBg = item.status === '진행중' ? '#e3f2fd' : '#fff3e0';
+    const statusColor = item.status === '진행중' ? '#1565c0' : '#e65100';
+    
+    html += `
+      <tr>
+        <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">
+          <input type="checkbox" class="payment-checkbox" data-idx="${idx}" onchange="updatePaymentSummary()" checked>
+        </td>
+        <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">
+          <span style="padding:0.2rem 0.4rem;background:${typeBg};color:${typeColor};border-radius:3px;font-size:0.7rem;">${item.type}</span>
+        </td>
+        <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">${item.year}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-weight:500;">${item.site}</td>
+        <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(item.amount)}</td>
+        <td style="padding:0.4rem;text-align:right;font-family:monospace;color:${item.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(item.profit)}</td>
+        <td style="padding:0.4rem;text-align:right;font-family:monospace;font-weight:600;color:#4caf50;border:1px solid #ddd;">${fmt(item.settlement)}</td>
+        <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">
+          <span style="padding:0.15rem 0.3rem;background:${statusBg};color:${statusColor};border-radius:3px;font-size:0.7rem;">${item.status}</span>
+        </td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody></table>';
+  document.getElementById('paymentTargetList').innerHTML = html;
+  
+  document.getElementById('paymentSummary').style.display = 'block';
+  updatePaymentSummary();
+}
+
+// 전체 선택/해제
+function selectAllPaymentTargets(checked) {
+  document.querySelectorAll('.payment-checkbox').forEach(cb => cb.checked = checked);
+  const selectAll = document.getElementById('selectAllPayment');
+  if (selectAll) selectAll.checked = checked;
+  updatePaymentSummary();
+}
+
+// 지급 요약 업데이트
+function updatePaymentSummary() {
+  const manager = document.getElementById('paymentManager').value;
+  const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+  
+  let count = 0;
+  let total = 0;
+  
+  checkboxes.forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    if (paymentTargets[idx]) {
+      count++;
+      total += paymentTargets[idx].settlement;
+    }
+  });
+  
+  document.getElementById('paymentSelectedCount').textContent = `${count}건`;
+  document.getElementById('paymentTotalAmount').textContent = fmtAmount(total);
+  document.getElementById('paymentManagerName').textContent = manager || '-';
+}
+
+// 정산 지급 실행
+async function processPayment() {
+  const manager = document.getElementById('paymentManager').value;
+  const paymentDate = document.getElementById('paymentDate').value;
+  const memo = document.getElementById('paymentMemo').value;
+  
+  if (!manager) {
+    showToast('담당자를 선택하세요.', 'error');
+    return;
+  }
+  
+  if (!paymentDate) {
+    showToast('지급일자를 입력하세요.', 'error');
+    return;
+  }
+  
+  const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
+  if (checkboxes.length === 0) {
+    showToast('지급할 현장을 선택하세요.', 'error');
+    return;
+  }
+  
+  // 선택된 항목 수집
+  const selectedItems = [];
+  let totalAmount = 0;
+  
+  checkboxes.forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    if (paymentTargets[idx]) {
+      selectedItems.push(paymentTargets[idx]);
+      totalAmount += paymentTargets[idx].settlement;
+    }
+  });
+  
+  // 확인
+  if (!confirm(`${manager} 담당자에게 ${selectedItems.length}건, 총 ${fmtAmount(totalAmount)}을 지급 처리하시겠습니까?\n\n지급일: ${paymentDate}\n비고: ${memo || '없음'}`)) {
+    return;
+  }
+  
+  try {
+    // 1. 공사현황 정산 상태 변경
+    const constItems = selectedItems.filter(item => item.type === '공사');
+    if (constItems.length > 0) {
+      const statusData = JSON.parse(localStorage.getItem('settlementStatusData') || '{}');
+      constItems.forEach(item => {
+        statusData[item.id] = '정산완료';
+      });
+      localStorage.setItem('settlementStatusData', JSON.stringify(statusData));
+      await saveSettlementStatusToFirebase(statusData);
+      
+      // settlementData 업데이트
+      if (settlementData.length > 0) {
+        constItems.forEach(item => {
+          const found = settlementData.find(d => `${d.year}_${d.no}` === item.id);
+          if (found) found.settled = '정산완료';
+        });
+      }
+    }
+    
+    // 2. 기술컨설팅 정산 상태 변경
+    const consultItems = selectedItems.filter(item => item.type === '컨설팅');
+    if (consultItems.length > 0) {
+      consultItems.forEach(item => {
+        const found = consultingData.find(d => d.id === item.id);
+        if (found) found.settled = '정산완료';
+      });
+      localStorage.setItem('consultingData', JSON.stringify(consultingData));
+      await saveConsultingDataToFirebase();
+    }
+    
+    // 3. 지급 이력 저장
+    const paymentRecord = {
+      id: 'PAY_' + Date.now(),
+      manager: manager,
+      paymentDate: paymentDate,
+      processDate: new Date().toISOString(),
+      memo: memo,
+      totalAmount: totalAmount,
+      itemCount: selectedItems.length,
+      items: selectedItems.map(item => ({
+        type: item.type,
+        id: item.id,
+        year: item.year,
+        site: item.site,
+        settlement: item.settlement
+      }))
+    };
+    
+    paymentHistory.push(paymentRecord);
+    localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+    await savePaymentHistoryToFirebase();
+    
+    showToast(`${manager} 담당자 ${selectedItems.length}건 정산 지급 완료!`, 'success');
+    
+    // 모달 닫고 새로고침
+    closePaymentModal();
+    
+    // 정산관리 테이블 새로고침
+    if (typeof renderSettlementTable === 'function') renderSettlementTable();
+    if (typeof renderConsultingTable === 'function') renderConsultingTable();
+    
+  } catch (e) {
+    console.error('정산 지급 실패:', e);
+    showToast('정산 지급 처리 중 오류가 발생했습니다.', 'error');
+  }
+}
+
+// Firebase에 지급 이력 저장
+async function savePaymentHistoryToFirebase() {
+  try {
+    await db.collection('appData').doc('paymentHistory').set({
+      data: paymentHistory,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {
+    console.error('지급 이력 Firebase 저장 실패:', e);
+  }
+}
+
+// 지급 이력 로드
+async function loadPaymentHistory() {
+  try {
+    // Firebase에서 로드
+    const doc = await db.collection('appData').doc('paymentHistory').get();
+    if (doc.exists && doc.data().data) {
+      paymentHistory = doc.data().data;
+      localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+    } else {
+      // localStorage에서 로드
+      paymentHistory = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
+    }
+  } catch (e) {
+    console.error('지급 이력 로드 실패:', e);
+    paymentHistory = JSON.parse(localStorage.getItem('paymentHistory') || '[]');
+  }
+}
+
+// 지급 이력 보기
+function viewPaymentHistory() {
+  document.getElementById('paymentHistoryModal').style.display = 'flex';
+  renderPaymentHistory();
+}
+
+function closePaymentHistoryModal() {
+  document.getElementById('paymentHistoryModal').style.display = 'none';
+}
+
+// 지급 이력 렌더링
+function renderPaymentHistory() {
+  if (paymentHistory.length === 0) {
+    document.getElementById('paymentHistoryContent').innerHTML = '<p style="padding:2rem;text-align:center;color:#999;">지급 이력이 없습니다</p>';
+    return;
+  }
+  
+  // 최신순 정렬
+  const sorted = [...paymentHistory].sort((a, b) => new Date(b.processDate) - new Date(a.processDate));
+  
+  let html = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+      <thead>
+        <tr style="background:#607d8b;color:white;">
+          <th style="padding:0.5rem;border:1px solid #455a64;">지급일</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">담당자</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">건수</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">지급금액</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">비고</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">처리일시</th>
+          <th style="padding:0.5rem;border:1px solid #455a64;">상세</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  
+  sorted.forEach((record, idx) => {
+    const processDate = new Date(record.processDate);
+    const processDateStr = processDate.toLocaleString('ko-KR');
+    
+    html += `
+      <tr style="border-bottom:1px solid #ddd;">
+        <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${record.paymentDate}</td>
+        <td style="padding:0.5rem;text-align:center;font-weight:600;border:1px solid #ddd;">${record.manager}</td>
+        <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${record.itemCount}건</td>
+        <td style="padding:0.5rem;text-align:right;font-family:monospace;font-weight:700;color:#4caf50;border:1px solid #ddd;">${fmt(record.totalAmount)}</td>
+        <td style="padding:0.5rem;border:1px solid #ddd;font-size:0.8rem;color:#666;">${record.memo || '-'}</td>
+        <td style="padding:0.5rem;text-align:center;font-size:0.75rem;color:#999;border:1px solid #ddd;">${processDateStr}</td>
+        <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">
+          <button onclick="showPaymentDetail('${record.id}')" style="padding:0.25rem 0.5rem;border:none;background:#2196f3;color:white;border-radius:4px;cursor:pointer;font-size:0.7rem;">상세</button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody></table>';
+  
+  // 전체 합계
+  const totalAmount = paymentHistory.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalCount = paymentHistory.reduce((sum, r) => sum + r.itemCount, 0);
+  
+  html += `
+    <div style="margin-top:1rem;padding:1rem;background:#e8f5e9;border-radius:8px;display:flex;justify-content:space-around;text-align:center;">
+      <div>
+        <div style="font-size:0.8rem;color:#666;">총 지급 횟수</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#2e7d32;">${paymentHistory.length}회</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem;color:#666;">총 지급 건수</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#2e7d32;">${totalCount}건</div>
+      </div>
+      <div>
+        <div style="font-size:0.8rem;color:#666;">총 지급 금액</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#4caf50;">${fmtAmount(totalAmount)}</div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('paymentHistoryContent').innerHTML = html;
+}
+
+// 지급 상세 보기
+function showPaymentDetail(paymentId) {
+  const record = paymentHistory.find(r => r.id === paymentId);
+  if (!record) return;
+  
+  let itemsHtml = record.items.map(item => `
+    <tr>
+      <td style="padding:0.4rem;border:1px solid #ddd;">${item.type}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;">${item.year}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;">${item.site}</td>
+      <td style="padding:0.4rem;text-align:right;font-family:monospace;color:#4caf50;border:1px solid #ddd;">${fmt(item.settlement)}</td>
+    </tr>
+  `).join('');
+  
+  const html = `
+    <div style="padding:1rem;background:#f5f5f5;border-radius:8px;margin-bottom:1rem;">
+      <p><strong>담당자:</strong> ${record.manager}</p>
+      <p><strong>지급일:</strong> ${record.paymentDate}</p>
+      <p><strong>비고:</strong> ${record.memo || '없음'}</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+      <thead>
+        <tr style="background:#4caf50;color:white;">
+          <th style="padding:0.5rem;border:1px solid #4caf50;">구분</th>
+          <th style="padding:0.5rem;border:1px solid #4caf50;">년도</th>
+          <th style="padding:0.5rem;border:1px solid #4caf50;">현장명</th>
+          <th style="padding:0.5rem;border:1px solid #4caf50;">지급금액</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+      <tfoot>
+        <tr style="background:#e8f5e9;font-weight:700;">
+          <td colspan="3" style="padding:0.5rem;border:1px solid #ddd;text-align:center;">합계 (${record.itemCount}건)</td>
+          <td style="padding:0.5rem;text-align:right;font-family:monospace;color:#4caf50;border:1px solid #ddd;">${fmt(record.totalAmount)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  `;
+  
+  document.getElementById('paymentHistoryContent').innerHTML = html;
+}
+
+// 지급 이력 엑셀 다운로드
+function downloadPaymentHistoryExcel() {
+  if (paymentHistory.length === 0) {
+    showToast('다운로드할 이력이 없습니다.', 'error');
+    return;
+  }
+  
+  const wsData = [
+    ['정산 지급 이력'],
+    ['다운로드일: ' + new Date().toLocaleDateString('ko-KR')],
+    [],
+    ['지급일', '담당자', '건수', '지급금액', '비고', '처리일시']
+  ];
+  
+  paymentHistory.forEach(record => {
+    wsData.push([
+      record.paymentDate,
+      record.manager,
+      record.itemCount,
+      record.totalAmount,
+      record.memo || '',
+      new Date(record.processDate).toLocaleString('ko-KR')
+    ]);
+  });
+  
+  // 합계
+  wsData.push([]);
+  wsData.push([
+    '합계', '',
+    paymentHistory.reduce((sum, r) => sum + r.itemCount, 0),
+    paymentHistory.reduce((sum, r) => sum + r.totalAmount, 0),
+    '', ''
+  ]);
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '지급이력');
+  
+  XLSX.writeFile(wb, `정산_지급이력_${new Date().toISOString().slice(0, 10)}.xlsx`);
   showToast('엑셀 파일이 다운로드되었습니다.', 'success');
 }
 
