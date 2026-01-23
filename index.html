@@ -11017,8 +11017,8 @@ function renderSiteDetailList(data, reportType, managerFilter, themeColor, theme
 
 // 본사 담당자별 미정산 내역 (24년/25년 분리)
 function renderHqUnsettledByYear(data) {
-  // 미정산 데이터만 필터
-  const unsettledData = data.filter(item => item.settled === '미정산');
+  // 미정산 데이터만 필터 (정산완료가 아닌 모든 것)
+  const unsettledData = data.filter(item => item.settled !== '정산완료');
   
   // 본사만 필터
   const hqUnsettled = unsettledData.filter(item => {
@@ -11153,8 +11153,8 @@ function renderHqUnsettledByYear(data) {
 
 // 외주 담당자별 미정산 내역 (24년/25년 분리)
 function renderExtUnsettledByYear(data) {
-  // 미정산 데이터만 필터
-  const unsettledData = data.filter(item => item.settled === '미정산');
+  // 미정산 데이터만 필터 (정산완료가 아닌 모든 것)
+  const unsettledData = data.filter(item => item.settled !== '정산완료');
   
   // 외주만 필터
   const extUnsettled = unsettledData.filter(item => {
