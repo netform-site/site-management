@@ -1001,6 +1001,7 @@ tr.selected { background: var(--primary-light); }
       <button class="btn btn-warning" onclick="openConfirmationModal()" style="background:#ff9800;color:white;">📄 담당자 확인서</button>
       <button class="btn btn-primary" onclick="openReportModal('본사')">📋 본사 보고서</button>
       <button class="btn" onclick="openReportModal('외주')" style="background:#9c27b0;color:white;">📋 외주 보고서</button>
+      <button class="btn" onclick="openIntegratedReportModal()" style="background:#e91e63;color:white;">📊 통합 보고서</button>
       <button class="btn btn-success" onclick="downloadSettlementExcel()">📥 엑셀 다운로드</button>
     </div>
   </div>
@@ -1374,6 +1375,40 @@ tr.selected { background: var(--primary-light); }
       <button class="btn btn-outline" onclick="closeConsultingReportModal()">닫기</button>
       <button class="btn" onclick="printConsultingReport()" style="background:#00897b;color:white;">🖨️ 인쇄</button>
       <button class="btn btn-success" onclick="downloadConsultingReportExcel()">📥 엑셀</button>
+    </div>
+  </div>
+</div>
+
+<!-- 통합 보고서 모달 -->
+<div class="modal" id="integratedReportModal">
+  <div class="modal-content" style="max-width:950px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header" style="background:linear-gradient(135deg, #e91e63, #9c27b0);color:white;">
+      <div class="modal-title" id="integratedReportModalTitle">📊 통합 실적 보고서</div>
+      <button class="modal-close" onclick="closeIntegratedReportModal()" style="color:white;">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 필터 -->
+      <div style="margin-bottom:1rem;padding:1rem;background:linear-gradient(135deg, #fce4ec, #f3e5f5);border-radius:8px;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+        <label style="font-weight:600;color:#333;">📌 담당자:</label>
+        <select id="integratedReportManagerFilter" onchange="renderIntegratedReport()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+          <option value="">전체 담당자</option>
+        </select>
+        <label style="font-weight:600;color:#333;margin-left:1rem;">📅 년도:</label>
+        <select id="integratedReportYearFilter" onchange="renderIntegratedReport()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+          <option value="">전체 년도</option>
+          <option value="2024">2024년</option>
+          <option value="2025">2025년</option>
+          <option value="2026">2026년</option>
+        </select>
+        <span id="integratedReportFilterInfo" style="margin-left:auto;font-size:0.85rem;color:#666;"></span>
+      </div>
+      <div id="integratedReportContent">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeIntegratedReportModal()">닫기</button>
+      <button class="btn" onclick="printIntegratedReport()" style="background:#e91e63;color:white;">🖨️ 인쇄</button>
+      <button class="btn btn-success" onclick="downloadIntegratedReportExcel()">📥 엑셀</button>
     </div>
   </div>
 </div>
@@ -9252,6 +9287,351 @@ function downloadConsultingReportExcel() {
   XLSX.utils.book_append_sheet(wb, ws, '컨설팅정산');
   
   const fileName = `기술컨설팅_정산보고서_${managerFilter || '전체'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  showToast('엑셀 파일이 다운로드되었습니다.', 'success');
+}
+
+// ========== 통합 보고서 (공사현황 + 기술컨설팅) ==========
+
+function openIntegratedReportModal() {
+  document.getElementById('integratedReportModal').style.display = 'flex';
+  
+  // 담당자 목록 수집 (공사현황 + 기술컨설팅)
+  const constructionManagers = settlementData.length > 0 
+    ? [...new Set(settlementData.map(d => d.manager).filter(m => m))]
+    : [...new Set(generateSettlementFromCurrentData().map(d => d.manager).filter(m => m))];
+  const consultingManagers = [...new Set(consultingData.map(d => d.manager).filter(m => m))];
+  const allManagers = [...new Set([...constructionManagers, ...consultingManagers])].sort();
+  
+  const select = document.getElementById('integratedReportManagerFilter');
+  select.innerHTML = '<option value="">전체 담당자</option>';
+  allManagers.forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  
+  renderIntegratedReport();
+}
+
+function closeIntegratedReportModal() {
+  document.getElementById('integratedReportModal').style.display = 'none';
+}
+
+function renderIntegratedReport() {
+  const managerFilter = document.getElementById('integratedReportManagerFilter').value;
+  const yearFilter = document.getElementById('integratedReportYearFilter').value;
+  
+  // 공사현황 데이터
+  let constructionData = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
+  
+  // 기술컨설팅 데이터
+  let consulting = [...consultingData];
+  
+  // 필터 적용
+  if (managerFilter) {
+    constructionData = constructionData.filter(d => d.manager === managerFilter);
+    consulting = consulting.filter(d => d.manager === managerFilter);
+  }
+  if (yearFilter) {
+    constructionData = constructionData.filter(d => String(d.year).includes(yearFilter.slice(2)));
+    consulting = consulting.filter(d => d.year === yearFilter);
+  }
+  
+  // 통계 계산
+  const constTotals = {
+    count: constructionData.length,
+    amount: constructionData.reduce((s, i) => s + (i.amount || 0), 0),
+    profit: constructionData.reduce((s, i) => s + (i.profit || 0), 0),
+    settlement: constructionData.reduce((s, i) => s + (i.realSettlement || 0), 0),
+    companyProfit: constructionData.reduce((s, i) => s + (i.companyProfit || 0), 0)
+  };
+  
+  const consultTotals = {
+    count: consulting.length,
+    amount: consulting.reduce((s, i) => s + (i.bidAmount || 0), 0),
+    profit: consulting.reduce((s, i) => s + (i.profit || 0), 0),
+    settlement: consulting.reduce((s, i) => s + (i.settlement || 0), 0),
+    companyProfit: consulting.reduce((s, i) => s + (i.companyProfit || 0), 0)
+  };
+  
+  const grandTotals = {
+    count: constTotals.count + consultTotals.count,
+    amount: constTotals.amount + consultTotals.amount,
+    profit: constTotals.profit + consultTotals.profit,
+    settlement: constTotals.settlement + consultTotals.settlement,
+    companyProfit: constTotals.companyProfit + consultTotals.companyProfit
+  };
+  
+  // 담당자별 통합 집계
+  const managerStats = {};
+  
+  constructionData.forEach(item => {
+    const m = item.manager || '기타';
+    if (!managerStats[m]) {
+      managerStats[m] = { constCount: 0, constAmount: 0, constProfit: 0, constSettlement: 0, consultCount: 0, consultAmount: 0, consultProfit: 0, consultSettlement: 0 };
+    }
+    managerStats[m].constCount++;
+    managerStats[m].constAmount += item.amount || 0;
+    managerStats[m].constProfit += item.profit || 0;
+    managerStats[m].constSettlement += item.realSettlement || 0;
+  });
+  
+  consulting.forEach(item => {
+    const m = item.manager || '기타';
+    if (!managerStats[m]) {
+      managerStats[m] = { constCount: 0, constAmount: 0, constProfit: 0, constSettlement: 0, consultCount: 0, consultAmount: 0, consultProfit: 0, consultSettlement: 0 };
+    }
+    managerStats[m].consultCount++;
+    managerStats[m].consultAmount += item.bidAmount || 0;
+    managerStats[m].consultProfit += item.profit || 0;
+    managerStats[m].consultSettlement += item.settlement || 0;
+  });
+  
+  const managerName = managerFilter ? ` - ${managerFilter}` : '';
+  const yearName = yearFilter ? ` ${yearFilter}년` : '';
+  
+  let html = `
+    <div style="padding:1rem;">
+      <!-- 제목 -->
+      <h2 style="text-align:center;color:#e91e63;margin-bottom:0.5rem;font-size:1.5rem;">
+        📊 통합 실적${managerName}${yearName} 보고서
+      </h2>
+      <p style="text-align:center;color:#666;font-size:0.85rem;margin-bottom:1.5rem;">
+        보고일: ${new Date().toLocaleDateString('ko-KR')} | 공사현황 + 기술컨설팅 통합
+      </p>
+      
+      <!-- 전체 요약 -->
+      <div style="background:linear-gradient(135deg, #fce4ec, #f3e5f5);padding:1rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid #e1bee7;">
+        <h3 style="font-size:0.95rem;margin-bottom:1rem;color:#880e4f;">📈 전체 통합 요약</h3>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;text-align:center;">
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#e91e63;">${grandTotals.count}건</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.7rem;color:#666;">총 금액</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#e91e63;">${fmtAmount(grandTotals.amount)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.7rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.2rem;font-weight:700;color:${grandTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(grandTotals.profit)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.7rem;color:#666;">담당자 정산</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#7b1fa2;">${fmtAmount(grandTotals.settlement)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.7rem;color:#666;">회사 수익</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#1565c0;">${fmtAmount(grandTotals.companyProfit)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 분야별 비교 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <!-- 공사현황 -->
+        <div style="background:#e3f2fd;padding:1rem;border-radius:8px;border:1px solid #90caf9;">
+          <h4 style="font-size:0.9rem;margin-bottom:0.75rem;color:#1565c0;">🏗️ 공사현황</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
+            <div>건수: <strong>${constTotals.count}건</strong></div>
+            <div>금액: <strong style="color:#1565c0;">${fmtAmount(constTotals.amount)}</strong></div>
+            <div>이익금: <strong style="color:${constTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(constTotals.profit)}</strong></div>
+            <div>정산: <strong style="color:#7b1fa2;">${fmtAmount(constTotals.settlement)}</strong></div>
+          </div>
+        </div>
+        <!-- 기술컨설팅 -->
+        <div style="background:#e0f2f1;padding:1rem;border-radius:8px;border:1px solid #80cbc4;">
+          <h4 style="font-size:0.9rem;margin-bottom:0.75rem;color:#00897b;">📋 기술컨설팅</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;font-size:0.85rem;">
+            <div>건수: <strong>${consultTotals.count}건</strong></div>
+            <div>금액: <strong style="color:#00897b;">${fmtAmount(consultTotals.amount)}</strong></div>
+            <div>이익금: <strong style="color:${consultTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(consultTotals.profit)}</strong></div>
+            <div>정산: <strong style="color:#7b1fa2;">${fmtAmount(consultTotals.settlement)}</strong></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 담당자별 통합 실적 -->
+      <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:#e91e63;padding:0.5rem;background:linear-gradient(135deg, #fce4ec, #f3e5f5);border-radius:6px;">
+          👥 담당자별 통합 실적
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+          <thead>
+            <tr style="background:linear-gradient(135deg, #e91e63, #9c27b0);color:white;">
+              <th rowspan="2" style="padding:0.5rem;border:1px solid #c2185b;vertical-align:middle;">담당자</th>
+              <th colspan="3" style="padding:0.4rem;border:1px solid #c2185b;background:#1565c0;">🏗️ 공사현황</th>
+              <th colspan="3" style="padding:0.4rem;border:1px solid #c2185b;background:#00897b;">📋 컨설팅</th>
+              <th colspan="2" style="padding:0.4rem;border:1px solid #c2185b;background:#7b1fa2;">📊 통합</th>
+            </tr>
+            <tr style="background:#f5f5f5;font-size:0.7rem;">
+              <th style="padding:0.3rem;border:1px solid #ddd;">건수</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">정산</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">건수</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">정산</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">총 이익</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">총 정산</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(managerStats)
+              .sort((a, b) => (b[1].constSettlement + b[1].consultSettlement) - (a[1].constSettlement + a[1].consultSettlement))
+              .map(([manager, stats]) => {
+                const totalProfit = stats.constProfit + stats.consultProfit;
+                const totalSettlement = stats.constSettlement + stats.consultSettlement;
+                return `
+                  <tr style="border-bottom:1px solid #ddd;">
+                    <td style="padding:0.4rem;font-weight:600;border:1px solid #ddd;">${manager}</td>
+                    <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;background:#e3f2fd;">${stats.constCount}건</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;background:#e3f2fd;color:${stats.constProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(stats.constProfit)}</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;background:#e3f2fd;color:#1565c0;">${fmt(stats.constSettlement)}</td>
+                    <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;background:#e0f2f1;">${stats.consultCount}건</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;background:#e0f2f1;color:${stats.consultProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(stats.consultProfit)}</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;background:#e0f2f1;color:#00897b;">${fmt(stats.consultSettlement)}</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;font-weight:700;border:1px solid #ddd;background:#fce4ec;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</td>
+                    <td style="padding:0.4rem;text-align:right;font-family:monospace;font-weight:700;border:1px solid #ddd;background:#fce4ec;color:#7b1fa2;">${fmt(totalSettlement)}</td>
+                  </tr>
+                `;
+              }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:linear-gradient(135deg, #fce4ec, #f3e5f5);font-weight:700;">
+              <td style="padding:0.5rem;border:1px solid #ddd;">합계</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${constTotals.count}건</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${constTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(constTotals.profit)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#1565c0;">${fmt(constTotals.settlement)}</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${consultTotals.count}건</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${consultTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(consultTotals.profit)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#00897b;">${fmt(consultTotals.settlement)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${grandTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(grandTotals.profit)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#7b1fa2;">${fmt(grandTotals.settlement)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <!-- 총 합계 박스 -->
+      <div style="background:#f5f5f5;color:#333;padding:1rem;border-radius:8px;margin-bottom:1rem;border:2px solid #e91e63;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#e91e63;">${grandTotals.count}건</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#2e7d32;">${fmtAmount(grandTotals.profit)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">담당자 정산 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#7b1fa2;">${fmtAmount(grandTotals.settlement)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">회사 수익 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#1565c0;">${fmtAmount(grandTotals.companyProfit)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="text-align:center;padding-top:1rem;border-top:1px solid #ddd;color:#999;font-size:0.75rem;">
+        ㈜석민이앤씨 정산 관리 시스템
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('integratedReportContent').innerHTML = html;
+  document.getElementById('integratedReportFilterInfo').textContent = `공사 ${constTotals.count}건 + 컨설팅 ${consultTotals.count}건 = 총 ${grandTotals.count}건`;
+}
+
+function printIntegratedReport() {
+  const content = document.getElementById('integratedReportContent').innerHTML;
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>통합 실적 보고서</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans KR', sans-serif; padding: 20px; font-size: 11px; color: #333; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 5px; border: 1px solid #ddd; }
+        @media print {
+          body { padding: 10px; }
+          @page { size: A4 landscape; margin: 8mm; }
+        }
+      </style>
+    </head>
+    <body>${content}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 500);
+}
+
+function downloadIntegratedReportExcel() {
+  const managerFilter = document.getElementById('integratedReportManagerFilter').value;
+  const yearFilter = document.getElementById('integratedReportYearFilter').value;
+  
+  let constructionData = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
+  let consulting = [...consultingData];
+  
+  if (managerFilter) {
+    constructionData = constructionData.filter(d => d.manager === managerFilter);
+    consulting = consulting.filter(d => d.manager === managerFilter);
+  }
+  if (yearFilter) {
+    constructionData = constructionData.filter(d => String(d.year).includes(yearFilter.slice(2)));
+    consulting = consulting.filter(d => d.year === yearFilter);
+  }
+  
+  // 담당자별 집계
+  const managerStats = {};
+  constructionData.forEach(item => {
+    const m = item.manager || '기타';
+    if (!managerStats[m]) managerStats[m] = { constCount: 0, constProfit: 0, constSettlement: 0, consultCount: 0, consultProfit: 0, consultSettlement: 0 };
+    managerStats[m].constCount++;
+    managerStats[m].constProfit += item.profit || 0;
+    managerStats[m].constSettlement += item.realSettlement || 0;
+  });
+  consulting.forEach(item => {
+    const m = item.manager || '기타';
+    if (!managerStats[m]) managerStats[m] = { constCount: 0, constProfit: 0, constSettlement: 0, consultCount: 0, consultProfit: 0, consultSettlement: 0 };
+    managerStats[m].consultCount++;
+    managerStats[m].consultProfit += item.profit || 0;
+    managerStats[m].consultSettlement += item.settlement || 0;
+  });
+  
+  const wsData = [
+    ['통합 실적 보고서'],
+    ['보고일: ' + new Date().toLocaleDateString('ko-KR')],
+    [],
+    ['담당자', '공사-건수', '공사-이익금', '공사-정산', '컨설팅-건수', '컨설팅-이익금', '컨설팅-정산', '총 이익금', '총 정산금액']
+  ];
+  
+  Object.entries(managerStats)
+    .sort((a, b) => (b[1].constSettlement + b[1].consultSettlement) - (a[1].constSettlement + a[1].consultSettlement))
+    .forEach(([manager, stats]) => {
+      wsData.push([
+        manager,
+        stats.constCount,
+        stats.constProfit,
+        stats.constSettlement,
+        stats.consultCount,
+        stats.consultProfit,
+        stats.consultSettlement,
+        stats.constProfit + stats.consultProfit,
+        stats.constSettlement + stats.consultSettlement
+      ]);
+    });
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '통합실적');
+  
+  const fileName = `통합실적_보고서_${managerFilter || '전체'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, fileName);
   showToast('엑셀 파일이 다운로드되었습니다.', 'success');
 }
