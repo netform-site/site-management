@@ -9511,6 +9511,12 @@ function renderIntegratedReport() {
         </table>
       </div>
       
+      <!-- 공사현황 현장별 리스트 -->
+      ${renderIntegratedConstructionList(constructionData, constTotals)}
+      
+      <!-- 기술컨설팅 현장별 리스트 -->
+      ${renderIntegratedConsultingList(consulting, consultTotals)}
+      
       <!-- 총 합계 박스 -->
       <div style="background:#f5f5f5;color:#333;padding:1rem;border-radius:8px;margin-bottom:1rem;border:2px solid #e91e63;">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
@@ -9541,6 +9547,120 @@ function renderIntegratedReport() {
   
   document.getElementById('integratedReportContent').innerHTML = html;
   document.getElementById('integratedReportFilterInfo').textContent = `공사 ${constTotals.count}건 + 컨설팅 ${consultTotals.count}건 = 총 ${grandTotals.count}건`;
+}
+
+// 통합 보고서 - 공사현황 리스트 렌더링
+function renderIntegratedConstructionList(data, totals) {
+  if (data.length === 0) return '';
+  
+  let rows = data.slice(0, 50).map(item => {
+    const settledColor = item.settled === '정산완료' ? '#2e7d32' : (item.settled === '진행중' ? '#1565c0' : '#e65100');
+    const settledBg = item.settled === '정산완료' ? '#c8e6c9' : (item.settled === '진행중' ? '#e3f2fd' : '#fff3e0');
+    return `
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;">${item.year || '-'}</td>
+        <td style="padding:0.3rem;border:1px solid #eee;font-weight:500;">${item.site || '-'}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.amount)}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;color:${(item.profit || 0) >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #eee;">${fmt(item.profit)}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;color:#1565c0;font-weight:600;border:1px solid #eee;">${fmt(item.realSettlement)}</td>
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;font-size:0.65rem;">${item.manager || '-'}</td>
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;">
+          <span style="padding:0.1rem 0.3rem;border-radius:3px;font-size:0.6rem;background:${settledBg};color:${settledColor};">${item.settled || '미정산'}</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  if (data.length > 50) {
+    rows += `<tr><td colspan="7" style="text-align:center;padding:0.5rem;color:#999;">... 외 ${data.length - 50}건 더 있음</td></tr>`;
+  }
+  
+  return `
+    <div style="margin-bottom:1.5rem;">
+      <h3 style="font-size:1rem;margin-bottom:1rem;color:#1565c0;padding:0.5rem;background:#e3f2fd;border-radius:6px;">
+        🏗️ 공사현황 현장별 내역 (${data.length}건)
+      </h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+        <thead>
+          <tr style="background:#1565c0;color:white;">
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:35px;">년도</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;min-width:120px;">공사현장</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:80px;">공사금액</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:70px;">이익금</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:70px;">정산금액</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:45px;">담당자</th>
+            <th style="padding:0.4rem;border:1px solid #1565c0;width:45px;">정산</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr style="background:#e3f2fd;font-weight:700;">
+            <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;text-align:center;">합계 (${data.length}건)</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(totals.amount)}</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(totals.profit)}</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;color:#1565c0;border:1px solid #ddd;">${fmt(totals.settlement)}</td>
+            <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
+// 통합 보고서 - 기술컨설팅 리스트 렌더링
+function renderIntegratedConsultingList(data, totals) {
+  if (data.length === 0) return '';
+  
+  let rows = data.map(item => {
+    const settledColor = item.settled === '정산완료' ? '#2e7d32' : (item.settled === '진행중' ? '#1565c0' : '#e65100');
+    const settledBg = item.settled === '정산완료' ? '#c8e6c9' : (item.settled === '진행중' ? '#e3f2fd' : '#fff3e0');
+    return `
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;">${item.year || '-'}</td>
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;font-size:0.6rem;">${item.type || '-'}</td>
+        <td style="padding:0.3rem;border:1px solid #eee;font-weight:500;">${item.site || '-'}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.bidAmount)}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;color:${(item.profit || 0) >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #eee;">${fmt(item.profit)}</td>
+        <td style="padding:0.3rem;text-align:right;font-family:monospace;color:#00897b;font-weight:600;border:1px solid #eee;">${fmt(item.settlement)}</td>
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;font-size:0.65rem;">${item.manager || '-'}</td>
+        <td style="padding:0.3rem;text-align:center;border:1px solid #eee;">
+          <span style="padding:0.1rem 0.3rem;border-radius:3px;font-size:0.6rem;background:${settledBg};color:${settledColor};">${item.settled || '미정산'}</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  return `
+    <div style="margin-bottom:1.5rem;">
+      <h3 style="font-size:1rem;margin-bottom:1rem;color:#00897b;padding:0.5rem;background:#e0f2f1;border-radius:6px;">
+        📋 기술컨설팅 현장별 내역 (${data.length}건)
+      </h3>
+      <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+        <thead>
+          <tr style="background:#00897b;color:white;">
+            <th style="padding:0.4rem;border:1px solid #00897b;width:35px;">년도</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:45px;">구분</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;min-width:120px;">공사현장</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:80px;">낙찰금액</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:70px;">이익금</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:70px;">정산금액</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:45px;">담당자</th>
+            <th style="padding:0.4rem;border:1px solid #00897b;width:45px;">정산</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr style="background:#e0f2f1;font-weight:700;">
+            <td colspan="3" style="padding:0.4rem;border:1px solid #ddd;text-align:center;">합계 (${data.length}건)</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(totals.amount)}</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(totals.profit)}</td>
+            <td style="padding:0.4rem;text-align:right;font-family:monospace;color:#00897b;border:1px solid #ddd;">${fmt(totals.settlement)}</td>
+            <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
 }
 
 function printIntegratedReport() {
