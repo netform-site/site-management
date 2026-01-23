@@ -930,6 +930,7 @@ tr.selected { background: var(--primary-light); }
         <!-- 필터 및 추가 버튼 -->
         <div style="margin-bottom:1rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" onclick="openConsultingAddModal()">➕ 신규 등록</button>
+          <button class="btn btn-sm" onclick="openConsultingReportModal()" style="background:#00897b;color:white;">📋 컨설팅 보고서</button>
           <select id="consultingYearFilter" class="search-select" onchange="filterConsultingData()">
             <option value="">전체 년도</option>
             <option value="2024">2024년</option>
@@ -1339,6 +1340,40 @@ tr.selected { background: var(--primary-light); }
       <button class="btn btn-outline" onclick="closeConfirmationModal()">닫기</button>
       <button class="btn btn-primary" onclick="downloadConfirmationPDF()">📥 PDF 다운로드</button>
       <button class="btn btn-success" onclick="sendConfirmationEmail()">📧 이메일 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기술컨설팅 보고서 모달 -->
+<div class="modal" id="consultingReportModal">
+  <div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header" style="background:#00897b;color:white;">
+      <div class="modal-title" id="consultingReportModalTitle">📋 기술컨설팅 정산 보고서</div>
+      <button class="modal-close" onclick="closeConsultingReportModal()" style="color:white;">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 필터 -->
+      <div style="margin-bottom:1rem;padding:1rem;background:#e0f2f1;border-radius:8px;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+        <label style="font-weight:600;color:#333;">📌 담당자 선택:</label>
+        <select id="consultingReportManagerFilter" onchange="renderConsultingReport()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+          <option value="">전체 담당자</option>
+        </select>
+        <label style="font-weight:600;color:#333;margin-left:1rem;">📅 년도:</label>
+        <select id="consultingReportYearFilter" onchange="renderConsultingReport()" style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:6px;font-size:0.9rem;">
+          <option value="">전체 년도</option>
+          <option value="2024">2024년</option>
+          <option value="2025">2025년</option>
+          <option value="2026">2026년</option>
+        </select>
+        <span id="consultingReportFilterInfo" style="margin-left:auto;font-size:0.85rem;color:#666;"></span>
+      </div>
+      <div id="consultingReportContent">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeConsultingReportModal()">닫기</button>
+      <button class="btn" onclick="printConsultingReport()" style="background:#00897b;color:white;">🖨️ 인쇄</button>
+      <button class="btn btn-success" onclick="downloadConsultingReportExcel()">📥 엑셀</button>
     </div>
   </div>
 </div>
@@ -8893,6 +8928,332 @@ function renderConsultingManagerSummary(data) {
   html += '</div>';
   
   document.getElementById('consultingManagerSummary').innerHTML = html;
+}
+
+// ========== 기술컨설팅 보고서 ==========
+
+// 기술컨설팅 보고서 모달 열기
+function openConsultingReportModal() {
+  document.getElementById('consultingReportModal').style.display = 'flex';
+  
+  // 담당자 필터 옵션 업데이트
+  const managers = [...new Set(consultingData.map(d => d.manager).filter(m => m))];
+  const select = document.getElementById('consultingReportManagerFilter');
+  select.innerHTML = '<option value="">전체 담당자</option>';
+  managers.forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  
+  renderConsultingReport();
+}
+
+function closeConsultingReportModal() {
+  document.getElementById('consultingReportModal').style.display = 'none';
+}
+
+// 기술컨설팅 보고서 렌더링
+function renderConsultingReport() {
+  const managerFilter = document.getElementById('consultingReportManagerFilter').value;
+  const yearFilter = document.getElementById('consultingReportYearFilter').value;
+  
+  let data = [...consultingData];
+  
+  // 필터 적용
+  if (managerFilter) {
+    data = data.filter(d => d.manager === managerFilter);
+  }
+  if (yearFilter) {
+    data = data.filter(d => d.year === yearFilter);
+  }
+  
+  // 정렬
+  data.sort((a, b) => {
+    if (b.year !== a.year) return b.year.localeCompare(a.year);
+    return (b.id || '').localeCompare(a.id || '');
+  });
+  
+  const managerName = managerFilter ? ` - ${managerFilter}` : '';
+  const yearName = yearFilter ? ` ${yearFilter}년` : '';
+  
+  // 통계 계산
+  const totals = {
+    count: data.length,
+    bidAmount: data.reduce((s, i) => s + (i.bidAmount || 0), 0),
+    totalExpense: data.reduce((s, i) => s + (i.totalExpense || 0), 0),
+    profit: data.reduce((s, i) => s + (i.profit || 0), 0),
+    settlement: data.reduce((s, i) => s + (i.settlement || 0), 0),
+    companyProfit: data.reduce((s, i) => s + (i.companyProfit || 0), 0)
+  };
+  
+  // 담당자별 집계
+  const managerStats = {};
+  data.forEach(item => {
+    const m = item.manager || '기타';
+    if (!managerStats[m]) {
+      managerStats[m] = { count: 0, bidAmount: 0, profit: 0, settlement: 0 };
+    }
+    managerStats[m].count++;
+    managerStats[m].bidAmount += item.bidAmount || 0;
+    managerStats[m].profit += item.profit || 0;
+    managerStats[m].settlement += item.settlement || 0;
+  });
+  
+  let html = `
+    <div style="padding:1rem;">
+      <!-- 제목 -->
+      <h2 style="text-align:center;color:#00897b;margin-bottom:0.5rem;font-size:1.5rem;">
+        📋 기술컨설팅${managerName}${yearName} 정산 보고서
+      </h2>
+      <p style="text-align:center;color:#666;font-size:0.85rem;margin-bottom:1.5rem;">
+        보고일: ${new Date().toLocaleDateString('ko-KR')}
+      </p>
+      
+      <!-- 요약 카드 -->
+      <div style="background:#e0f2f1;padding:1rem;border-radius:8px;margin-bottom:1.5rem;border:1px solid #80cbc4;">
+        <h3 style="font-size:0.95rem;margin-bottom:1rem;color:#00695c;">✅ 컨설팅 정산 요약</h3>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.3rem;font-weight:700;color:#00897b;">${totals.count}건</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.75rem;color:#666;">총 낙찰금액</div>
+            <div style="font-size:1.3rem;font-weight:700;color:#00897b;">${fmtAmount(totals.bidAmount)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.3rem;font-weight:700;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(totals.profit)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;">
+            <div style="font-size:0.75rem;color:#666;">정산금액 (15%)</div>
+            <div style="font-size:1.3rem;font-weight:700;color:#7b1fa2;">${fmtAmount(totals.settlement)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 담당자별 정산 내역 -->
+      <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:#00897b;padding:0.5rem;background:#e0f2f1;border-radius:6px;">
+          👥 담당자별 정산 내역 (${data.length}건)
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+          <thead>
+            <tr style="background:#00897b;color:white;">
+              <th style="padding:0.5rem;text-align:left;border:1px solid #00897b;">담당자</th>
+              <th style="padding:0.5rem;text-align:center;border:1px solid #00897b;">건수</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid #00897b;">낙찰금액</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid #00897b;">이익금</th>
+              <th style="padding:0.5rem;text-align:center;border:1px solid #00897b;">이익률</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid #00897b;">정산금액(15%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Object.entries(managerStats)
+              .sort((a, b) => b[1].settlement - a[1].settlement)
+              .map(([manager, stats]) => `
+                <tr style="border-bottom:1px solid #ddd;">
+                  <td style="padding:0.5rem;font-weight:600;border:1px solid #ddd;">${manager}</td>
+                  <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${stats.count}건</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(stats.bidAmount)}</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;color:${stats.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(stats.profit)}</td>
+                  <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${stats.bidAmount > 0 ? (stats.profit / stats.bidAmount * 100).toFixed(1) : 0}%</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;font-weight:700;color:#7b1fa2;border:1px solid #ddd;">${fmt(stats.settlement)}</td>
+                </tr>
+              `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:#e0f2f1;font-weight:700;">
+              <td style="padding:0.5rem;border:1px solid #ddd;">합계</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${totals.count}건</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(totals.bidAmount)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(totals.profit)}</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${totals.bidAmount > 0 ? (totals.profit / totals.bidAmount * 100).toFixed(1) : 0}%</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;font-weight:700;color:#7b1fa2;border:1px solid #ddd;">${fmt(totals.settlement)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <!-- 현장별 상세 리스트 -->
+      <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;margin-bottom:1rem;color:#00897b;padding:0.5rem;background:#e0f2f1;border-radius:6px;">
+          📋 현장별 상세 내역 (${data.length}건)
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+          <thead>
+            <tr style="background:#00897b;color:white;">
+              <th style="padding:0.4rem;text-align:center;border:1px solid #00897b;width:40px;">년도</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #00897b;width:50px;">구분</th>
+              <th style="padding:0.4rem;text-align:left;border:1px solid #00897b;min-width:120px;">공사현장</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #00897b;width:85px;">낙찰금액</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #00897b;width:85px;">지출총액</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #00897b;width:75px;">이익금</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #00897b;width:45px;">이익률</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #00897b;width:75px;">정산금액</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #00897b;width:50px;">담당자</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #00897b;width:50px;">정산</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => {
+              const settledColor = item.settled === '정산완료' ? '#2e7d32' : (item.settled === '진행중' ? '#1565c0' : '#e65100');
+              const settledBg = item.settled === '정산완료' ? '#c8e6c9' : (item.settled === '진행중' ? '#e3f2fd' : '#fff3e0');
+              return `
+                <tr style="border-bottom:1px solid #eee;">
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">${item.year || '-'}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #eee;font-size:0.7rem;">${item.type || '-'}</td>
+                  <td style="padding:0.4rem;border:1px solid #eee;font-weight:500;">${item.site || '-'}</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.bidAmount)}</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #eee;">${fmt(item.totalExpense)}</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;color:${(item.profit || 0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:600;border:1px solid #eee;">${fmt(item.profit)}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">${item.profitRate || 0}%</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;color:#7b1fa2;font-weight:700;border:1px solid #eee;">${fmt(item.settlement)}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #eee;font-size:0.7rem;">${item.manager || '-'}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #eee;">
+                    <span style="padding:0.15rem 0.4rem;border-radius:3px;font-size:0.65rem;background:${settledBg};color:${settledColor};">${item.settled || '미정산'}</span>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="background:#e0f2f1;font-weight:700;">
+              <td colspan="3" style="padding:0.5rem;border:1px solid #ddd;text-align:center;">합계 (${data.length}건)</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(totals.bidAmount)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(totals.totalExpense)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};border:1px solid #ddd;">${fmt(totals.profit)}</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${totals.bidAmount > 0 ? (totals.profit / totals.bidAmount * 100).toFixed(1) : 0}%</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;color:#7b1fa2;font-weight:700;border:1px solid #ddd;">${fmt(totals.settlement)}</td>
+              <td colspan="2" style="padding:0.5rem;border:1px solid #ddd;"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <!-- 총 합계 -->
+      <div style="background:#f5f5f5;color:#333;padding:1rem;border-radius:8px;margin-bottom:1rem;border:2px solid #00897b;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#00897b;">${totals.count}건</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#2e7d32;">${fmtAmount(totals.profit)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">담당자 배분 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#7b1fa2;">${fmtAmount(totals.settlement)}</div>
+          </div>
+          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">회사 수익 합계</div>
+            <div style="font-size:1.25rem;font-weight:700;color:#00897b;">${fmtAmount(totals.companyProfit)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="text-align:center;padding-top:1rem;border-top:1px solid #ddd;color:#999;font-size:0.75rem;">
+        ㈜석민이앤씨 정산 관리 시스템
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('consultingReportContent').innerHTML = html;
+  document.getElementById('consultingReportFilterInfo').textContent = `${data.length}건 표시`;
+}
+
+// 기술컨설팅 보고서 인쇄
+function printConsultingReport() {
+  const content = document.getElementById('consultingReportContent').innerHTML;
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>기술컨설팅 정산 보고서</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: 'Noto Sans KR', sans-serif; 
+          padding: 20px; 
+          font-size: 11px;
+          color: #333;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 6px; border: 1px solid #ddd; }
+        th { background: #00897b; color: white; }
+        @media print {
+          body { padding: 10px; }
+          @page { size: A4; margin: 10mm; }
+        }
+      </style>
+    </head>
+    <body>${content}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => printWindow.print(), 500);
+}
+
+// 기술컨설팅 보고서 엑셀 다운로드
+function downloadConsultingReportExcel() {
+  const managerFilter = document.getElementById('consultingReportManagerFilter').value;
+  const yearFilter = document.getElementById('consultingReportYearFilter').value;
+  
+  let data = [...consultingData];
+  if (managerFilter) data = data.filter(d => d.manager === managerFilter);
+  if (yearFilter) data = data.filter(d => d.year === yearFilter);
+  
+  const wsData = [
+    ['기술컨설팅 정산 보고서'],
+    ['보고일: ' + new Date().toLocaleDateString('ko-KR')],
+    [],
+    ['년도', '구분', '공사현장', '공사명', '낙찰금액', '실행금액', '회사경비', '기타경비', '지출총액', '이익금', '이익률', '정산금액', '담당자', '정산여부']
+  ];
+  
+  data.forEach(item => {
+    wsData.push([
+      item.year,
+      item.type,
+      item.site,
+      item.project,
+      item.bidAmount,
+      item.execAmount,
+      item.companyExp,
+      item.otherExp,
+      item.totalExpense,
+      item.profit,
+      item.profitRate + '%',
+      item.settlement,
+      item.manager,
+      item.settled || '미정산'
+    ]);
+  });
+  
+  // 합계
+  wsData.push([]);
+  wsData.push([
+    '합계', '', '', '',
+    data.reduce((s, i) => s + (i.bidAmount || 0), 0),
+    data.reduce((s, i) => s + (i.execAmount || 0), 0),
+    data.reduce((s, i) => s + (i.companyExp || 0), 0),
+    data.reduce((s, i) => s + (i.otherExp || 0), 0),
+    data.reduce((s, i) => s + (i.totalExpense || 0), 0),
+    data.reduce((s, i) => s + (i.profit || 0), 0),
+    '',
+    data.reduce((s, i) => s + (i.settlement || 0), 0),
+    '', ''
+  ]);
+  
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '컨설팅정산');
+  
+  const fileName = `기술컨설팅_정산보고서_${managerFilter || '전체'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  showToast('엑셀 파일이 다운로드되었습니다.', 'success');
 }
 
 // ========== 기술컨설팅 현장 리스트 ==========
