@@ -336,6 +336,7 @@ tr.selected { background: var(--primary-light); }
         <button class="btn btn-admin" onclick="showManagerStats()">👥 담당자별 실적 현황</button>
         <button class="btn btn-admin" onclick="showSettlementManagement()">💰 정산 관리</button>
         <button class="btn btn-admin" onclick="document.getElementById('settlementFileInput').click()">📂 정산리스트 업로드</button>
+        <button class="btn btn-admin" onclick="showLastBulkUploadResults()" style="background:#9c27b0;">📋 총괄표 결과</button>
         <button class="btn btn-admin" onclick="openPasswordChangeModal()" style="margin-left:auto;background:var(--gray-500);">⚙️ 비밀번호 변경</button>
       </div>
       <input type="file" id="settlementFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleSettlementUpload(event)">
@@ -5661,20 +5662,21 @@ async function handleBulkSummaryUpload(event) {
     success: [],
     skipped: [],
     notFound: [],
-    error: []
+    error: [],
+    uploadDate: new Date().toLocaleString('ko-KR')
   };
   
-  // 현재 연도 데이터
-  const yearData = allData[currentYear] || [];
-  
-  // 현장명별 인덱스 맵 생성 (동일 현장명 감지용)
+  // 전체 년도 데이터에서 현장명별 맵 생성
   const siteMap = {};
-  yearData.forEach((item, idx) => {
-    const siteName = item.site || '';
-    if (!siteMap[siteName]) {
-      siteMap[siteName] = [];
-    }
-    siteMap[siteName].push({ idx, item });
+  Object.keys(allData).forEach(year => {
+    const yearData = allData[year] || [];
+    yearData.forEach((item, idx) => {
+      const siteName = item.site || '';
+      if (!siteMap[siteName]) {
+        siteMap[siteName] = [];
+      }
+      siteMap[siteName].push({ idx, item, year });
+    });
   });
   
   showToast(`${files.length}개 파일 처리 중...`, 'info');
@@ -5693,7 +5695,7 @@ async function handleBulkSummaryUpload(event) {
       
       const extractedSiteName = match[1].trim();
       
-      // 현장 찾기 (부분 일치)
+      // 현장 찾기 (부분 일치) - 전체 년도에서 검색
       let matchedSites = [];
       for (const siteName in siteMap) {
         if (siteName.includes(extractedSiteName) || extractedSiteName.includes(siteName)) {
@@ -5708,16 +5710,18 @@ async function handleBulkSummaryUpload(event) {
       
       if (matchedSites.length > 1) {
         // 동일 현장명이 여러 개 → 스킵
-        results.skipped.push({ fileName, extractedSiteName, count: matchedSites.length, reason: 'duplicate' });
+        const years = [...new Set(matchedSites.map(s => s.year))].join(', ');
+        results.skipped.push({ fileName, extractedSiteName, count: matchedSites.length, reason: 'duplicate', years });
         continue;
       }
       
       // 유일한 현장 → 데이터 파싱 및 저장
       const targetIdx = matchedSites[0].idx;
       const targetItem = matchedSites[0].item;
+      const targetYear = matchedSites[0].year;
       
       // 이미 데이터가 있는지 확인
-      const key = `${currentYear}_${targetItem.no}`;
+      const key = `${targetYear}_${targetItem.no}`;
       let hasExistingData = false;
       
       // 전역 detailData에서 확인
@@ -5731,23 +5735,26 @@ async function handleBulkSummaryUpload(event) {
       }
       
       if (hasExistingData) {
-        results.skipped.push({ fileName, extractedSiteName, siteName: targetItem.site, reason: 'exists' });
+        results.skipped.push({ fileName, extractedSiteName, siteName: targetItem.site, reason: 'exists', year: targetYear });
         continue;
       }
       
       // 엑셀 파일 읽기
       const data = await readExcelFile(file);
       
-      // 해당 현장의 상세 데이터 파싱 및 저장
-      await processBulkSummaryData(targetIdx, targetItem, data, fileName);
+      // 해당 현장의 상세 데이터 파싱 및 저장 (해당 년도 기준)
+      await processBulkSummaryData(targetIdx, targetItem, data, fileName, targetYear);
       
-      results.success.push({ fileName, siteName: targetItem.site });
+      results.success.push({ fileName, siteName: targetItem.site, year: targetYear });
       
     } catch (e) {
       console.error('파일 처리 오류:', fileName, e);
       results.error.push({ fileName, reason: e.message });
     }
   }
+  
+  // 결과 저장 (나중에 다시 확인 가능)
+  localStorage.setItem('lastBulkUploadResults', JSON.stringify(results));
   
   // 결과 표시
   showBulkUploadResults(results);
@@ -5780,11 +5787,12 @@ function readExcelFile(file) {
   });
 }
 
-async function processBulkSummaryData(idx, item, data, fileName) {
+async function processBulkSummaryData(idx, item, data, fileName, targetYear) {
   // 기존 detailData 가져오기 또는 초기화
-  const key = `${currentYear}_${item.no}`;
+  const year = targetYear || currentYear;
+  const key = `${year}_${item.no}`;
   console.log('=== processBulkSummaryData 시작 ===');
-  console.log('key:', key);
+  console.log('key:', key, 'year:', year);
   
   // 전역 detailData 객체 사용
   let detail = detailData[key] || {};
@@ -6007,7 +6015,10 @@ function showBulkUploadResults(results) {
   
   let html = `
     <div style="max-height:70vh;overflow-y:auto;">
-      <h3 style="margin-bottom:1rem;color:#333;">📁 총괄표 일괄 업로드 결과</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <h3 style="margin:0;color:#333;">📁 총괄표 일괄 업로드 결과</h3>
+        <span style="font-size:0.8rem;color:#888;">🕐 ${results.uploadDate || new Date().toLocaleString('ko-KR')}</span>
+      </div>
       
       <!-- 요약 -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-bottom:1.5rem;">
@@ -6043,6 +6054,7 @@ function showBulkUploadResults(results) {
               <tr style="border-bottom:1px solid #e8f5e9;">
                 <td style="padding:0.4rem 0.75rem;width:30px;color:#888;">${i+1}</td>
                 <td style="padding:0.4rem 0.75rem;">${s.siteName}</td>
+                <td style="padding:0.4rem 0.75rem;width:60px;color:#2e7d32;font-size:0.75rem;">${s.year || ''}년</td>
               </tr>
             `).join('')}
           </table>
@@ -6056,7 +6068,7 @@ function showBulkUploadResults(results) {
     html += `
       <div style="margin-bottom:1rem;">
         <div style="background:#c62828;color:white;padding:0.5rem 1rem;border-radius:8px 8px 0 0;font-weight:600;">
-          ❌ 현장 없음 - 총괄표 추가 필요 (${results.notFound.length}건)
+          ❌ 현장 없음 - 리스트에 먼저 추가 필요 (${results.notFound.length}건)
         </div>
         <div style="border:1px solid #ffcdd2;border-top:none;border-radius:0 0 8px 8px;max-height:150px;overflow-y:auto;">
           <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
@@ -6086,7 +6098,7 @@ function showBulkUploadResults(results) {
               <tr style="border-bottom:1px solid #e3f2fd;">
                 <td style="padding:0.4rem 0.75rem;width:30px;color:#888;">${i+1}</td>
                 <td style="padding:0.4rem 0.75rem;">${s.extractedSiteName}</td>
-                <td style="padding:0.4rem 0.75rem;color:#1565c0;font-weight:500;">${s.count}건 중복</td>
+                <td style="padding:0.4rem 0.75rem;color:#1565c0;font-weight:500;">${s.count}건 중복 (${s.years || ''})</td>
               </tr>
             `).join('')}
           </table>
@@ -6182,6 +6194,23 @@ function closeBulkResultModal() {
   const modal = document.getElementById('bulkResultModal');
   if (modal) {
     modal.remove();
+  }
+}
+
+// 이전 총괄표 업로드 결과 확인
+function showLastBulkUploadResults() {
+  try {
+    const saved = localStorage.getItem('lastBulkUploadResults');
+    if (!saved) {
+      showToast('저장된 총괄표 업로드 결과가 없습니다.', 'info');
+      return;
+    }
+    
+    const results = JSON.parse(saved);
+    showBulkUploadResults(results);
+  } catch(e) {
+    console.error('결과 로드 실패:', e);
+    showToast('결과를 불러올 수 없습니다.', 'error');
   }
 }
 
