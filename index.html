@@ -8284,9 +8284,27 @@ function switchSettlementMainTab(tab) {
     tabConsulting.style.color = 'white';
     sectionConstruction.style.display = 'none';
     sectionConsulting.style.display = 'block';
+    
+    // 기술컨설팅 현장 리스트에서 정산관리 데이터로 동기화
+    syncAllConsultingListToSettlement();
+    
     renderConsultingTable();
     populateConsultingManagerFilter();
   }
+}
+
+// 기술컨설팅 현장 리스트 전체를 정산관리로 동기화
+function syncAllConsultingListToSettlement() {
+  // 현장 리스트 로드
+  loadConsultingListData();
+  
+  // 각 현장에 대해 정산 데이터 동기화
+  consultingListData.forEach(item => {
+    syncConsultingToSettlement(item);
+  });
+  
+  // 저장
+  localStorage.setItem('consultingData', JSON.stringify(consultingData));
 }
 
 // 기술컨설팅 등록 모달 열기
@@ -8393,10 +8411,7 @@ function filterConsultingData() {
 
 // 기술컨설팅 테이블 렌더링
 function renderConsultingTable() {
-  filterConsultingData();
-  const data = filteredConsultingData.length > 0 ? filteredConsultingData : consultingData;
-  
-  // 필터 결과 없으면 전체 데이터 기준
+  // 필터 적용
   const yearFilter = document.getElementById('consultingYearFilter').value;
   const typeFilter = document.getElementById('consultingTypeFilter').value;
   const managerFilter = document.getElementById('consultingManagerFilter').value;
