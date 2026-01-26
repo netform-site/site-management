@@ -7507,13 +7507,17 @@ function parseNumber(val) {
 
 function updateManagerFilterOptions() {
   const data = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
-  const managers = [...new Set(data.map(item => item.manager).filter(m => m))];
+  
+  // 데이터에서 담당자 추출 + 기본 담당자 목록 병합
+  const managersFromData = data.map(item => item.manager).filter(m => m && m !== '기타');
+  const allManagers = new Set([...HQ_MANAGERS, ...managersFromData]);
+  const managers = [...allManagers].sort();
   
   const select = document.getElementById('settlementManagerFilter');
   const currentValue = select.value;
   
   select.innerHTML = '<option value="">전체 담당자</option>';
-  managers.sort().forEach(manager => {
+  managers.forEach(manager => {
     select.innerHTML += `<option value="${manager}">${manager}</option>`;
   });
   
