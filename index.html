@@ -1286,7 +1286,25 @@ tr.selected { background: var(--primary-light); }
     </div>
     <div class="modal-body">
       <div style="background:#fff3e0;padding:1rem;border-radius:8px;margin-bottom:1rem;">
-        <p style="margin:0;font-size:0.9rem;">📌 현재 필터에 맞는 데이터로 확인서를 생성합니다. 담당자를 선택하면 해당 담당자의 현장만 표시됩니다.</p>
+        <p style="margin:0 0 0.75rem 0;font-size:0.9rem;">📌 담당자를 선택하면 해당 담당자의 현장만 표시됩니다.</p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <select id="confirmationManagerSelect" class="search-select" onchange="renderConfirmationPreview()" style="min-width:150px;">
+            <option value="">전체 담당자</option>
+          </select>
+          <select id="confirmationYearSelect" class="search-select" onchange="renderConfirmationPreview()" style="min-width:120px;">
+            <option value="">전체 년도</option>
+            <option value="2024">2024년</option>
+            <option value="2025">2025년</option>
+            <option value="2026">2026년</option>
+            <option value="2024+2025">24년 미정산+25년</option>
+          </select>
+          <select id="confirmationSettledSelect" class="search-select" onchange="renderConfirmationPreview()" style="min-width:120px;">
+            <option value="">정산여부 전체</option>
+            <option value="정산완료">정산완료</option>
+            <option value="미정산">미정산</option>
+            <option value="진행중">진행중</option>
+          </select>
+        </div>
       </div>
       <div id="confirmationPreview"></div>
     </div>
@@ -7745,7 +7763,26 @@ let currentConfirmationManager = null;
 
 function openConfirmationModal() {
   document.getElementById('confirmationModal').classList.add('active');
+  
+  // 담당자 목록 채우기
+  populateConfirmationManagerSelect();
+  
   renderConfirmationPreview();
+}
+
+function populateConfirmationManagerSelect() {
+  const data = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+  
+  // 데이터에서 담당자 추출 + 기본 담당자 목록 병합
+  const managersFromData = data.map(item => item.manager).filter(m => m && m !== '기타');
+  const allManagers = new Set([...HQ_MANAGERS, ...managersFromData]);
+  const managers = [...allManagers].sort();
+  
+  const select = document.getElementById('confirmationManagerSelect');
+  select.innerHTML = '<option value="">전체 담당자</option>';
+  managers.forEach(manager => {
+    select.innerHTML += `<option value="${manager}">${manager}</option>`;
+  });
 }
 
 function closeConfirmationModal() {
@@ -7755,15 +7792,18 @@ function closeConfirmationModal() {
 function getFilteredConfirmationData() {
   let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
   
-  const yearFilter = document.getElementById('settlementYearFilter').value;
-  const managerFilter = document.getElementById('settlementManagerFilter').value;
-  const settledFilter = document.getElementById('settlementSettledFilter').value;
+  // 확인서 모달 내 필터 사용
+  const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+  const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
+  const settledFilter = document.getElementById('confirmationSettledSelect')?.value || '';
   
   // 년도 필터
   if (yearFilter === '2024') {
     data = data.filter(item => String(item.year).includes('24'));
   } else if (yearFilter === '2025') {
     data = data.filter(item => String(item.year).includes('25'));
+  } else if (yearFilter === '2026') {
+    data = data.filter(item => String(item.year).includes('26'));
   } else if (yearFilter === '2024+2025') {
     data = data.filter(item => {
       const is24 = String(item.year).includes('24');
