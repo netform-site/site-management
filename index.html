@@ -9072,6 +9072,24 @@ function syncAllConsultingListToSettlement() {
   // 현장 리스트 로드
   loadConsultingListData();
   
+  // 먼저 중복 데이터 정리 (현장명+년도 기준)
+  const seen = new Map();
+  consultingData = consultingData.filter(item => {
+    const key = `${item.site}_${item.year}`;
+    if (seen.has(key)) {
+      // 이미 있으면 listId가 있는 것 우선 (현장 리스트에서 동기화된 것)
+      const existing = seen.get(key);
+      if (item.listId && !existing.listId) {
+        // 새 항목이 listId가 있으면 기존 것 대체
+        seen.set(key, item);
+        return true;
+      }
+      return false; // 중복 제거
+    }
+    seen.set(key, item);
+    return true;
+  });
+  
   // 각 현장에 대해 정산 데이터 동기화
   consultingListData.forEach(item => {
     syncConsultingToSettlement(item);
@@ -9748,8 +9766,15 @@ function saveConsultingItem() {
 
 // 정산관리 기술컨설팅과 동기화
 function syncConsultingToSettlement(item) {
-  // 정산관리 데이터에서 같은 ID 찾기
-  const existIdx = consultingData.findIndex(d => d.listId === item.id);
+  // 정산관리 데이터에서 같은 ID 또는 같은 현장+년도 찾기
+  let existIdx = consultingData.findIndex(d => d.listId === item.id);
+  
+  // listId로 못 찾으면 현장명+년도로 찾기 (정산관리에서 직접 추가된 경우)
+  if (existIdx === -1) {
+    existIdx = consultingData.findIndex(d => 
+      d.site === item.site && d.year === item.year && !d.listId
+    );
+  }
   
   const settlementItem = {
     id: existIdx !== -1 ? consultingData[existIdx].id : Date.now().toString() + '_s',
