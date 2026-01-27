@@ -2210,10 +2210,14 @@ function renderTable() {
   // 해지된 건 목록
   const cancelledList = CANCELLED_INFO[currentYear] || [];
   
-  // 검색 필터 적용
-  let displayData = data;
+  // 검색 필터 적용 - 원본 인덱스 포함
+  let displayData = data.map((item, idx) => ({ ...item, _originalIdx: idx }));
   if (filteredData !== null) {
-    displayData = filteredData;
+    // 필터링된 데이터도 원본 인덱스 유지
+    displayData = filteredData.map(item => {
+      const origIdx = data.indexOf(item);
+      return { ...item, _originalIdx: origIdx >= 0 ? origIdx : data.findIndex(d => d.no === item.no && d.site === item.site) };
+    });
   }
   
   // 상태별 정렬: 진행중 → 미입금 → 입금완료 → 해지
@@ -2262,7 +2266,7 @@ function renderTable() {
   document.getElementById('tableWrapper').style.display = 'block';
   
   document.getElementById('tableBody').innerHTML = displayData.map((item, idx) => {
-    const originalIdx = data.indexOf(item);
+    const originalIdx = item._originalIdx;
     const isSelected = selectedItems.has(originalIdx);
     const typeClass = item.type?.includes('직영') ? 'type-direct' : (item.type?.includes('컨설팅') ? 'type-consulting' : '');
     
