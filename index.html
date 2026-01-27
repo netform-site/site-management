@@ -7789,6 +7789,24 @@ function loadConsultingData() {
     const saved = localStorage.getItem('consultingData');
     if (saved) {
       consultingData = JSON.parse(saved);
+      
+      // 중복 ID 수정
+      const seenIds = new Set();
+      let hasChanges = false;
+      consultingData.forEach((item, idx) => {
+        if (seenIds.has(item.id)) {
+          // 중복 ID 발견 - 새 ID 부여
+          item.id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${idx}`;
+          hasChanges = true;
+        }
+        seenIds.add(item.id);
+      });
+      
+      // 변경사항 있으면 저장
+      if (hasChanges) {
+        localStorage.setItem('consultingData', JSON.stringify(consultingData));
+        console.log('중복 ID 수정 완료');
+      }
     }
   } catch(e) {
     console.error('기술컨설팅 데이터 로드 실패:', e);
@@ -9071,24 +9089,31 @@ function switchSettlementMainTab(tab) {
 function syncAllConsultingListToSettlement() {
   // 현장 리스트 로드
   loadConsultingListData();
+  // 정산 데이터 로드
+  loadConsultingData();
   
   // 먼저 중복 데이터 정리 (현장명+년도 기준)
+  // listId가 있는 것(현장 리스트에서 온 것)을 우선 유지
   const seen = new Map();
-  consultingData = consultingData.filter(item => {
+  const cleanedData = [];
+  
+  consultingData.forEach(item => {
     const key = `${item.site}_${item.year}`;
     if (seen.has(key)) {
-      // 이미 있으면 listId가 있는 것 우선 (현장 리스트에서 동기화된 것)
-      const existing = seen.get(key);
-      if (item.listId && !existing.listId) {
-        // 새 항목이 listId가 있으면 기존 것 대체
-        seen.set(key, item);
-        return true;
+      const existingIdx = seen.get(key);
+      const existing = cleanedData[existingIdx];
+      // 기존 것에 listId가 없고, 현재 것에 listId가 있으면 대체
+      if (!existing.listId && item.listId) {
+        cleanedData[existingIdx] = item;
       }
-      return false; // 중복 제거
+      // 그 외에는 기존 것 유지 (중복 무시)
+    } else {
+      seen.set(key, cleanedData.length);
+      cleanedData.push(item);
     }
-    seen.set(key, item);
-    return true;
   });
+  
+  consultingData = cleanedData;
   
   // 각 현장에 대해 정산 데이터 동기화
   consultingListData.forEach(item => {
@@ -9103,6 +9128,10 @@ function syncAllConsultingListToSettlement() {
 function openConsultingAddModal(editId = null) {
   // 최신 데이터 로드
   loadConsultingData();
+  
+  console.log('=== 수정 모달 열기 ===');
+  console.log('요청된 editId:', editId);
+  console.log('현재 consultingData:', consultingData.map(d => ({ id: d.id, site: d.site, year: d.year })));
   
   document.getElementById('consultingAddModal').classList.add('active');
   document.getElementById('consultingEditId').value = '';
@@ -9129,6 +9158,7 @@ function openConsultingAddModal(editId = null) {
   
   if (editId) {
     const item = consultingData.find(d => d.id === editId);
+    console.log('찾은 item:', item);
     if (item) {
       document.getElementById('consultingEditId').value = editId;
       document.getElementById('consultingYear').value = item.year;
@@ -9789,8 +9819,11 @@ function syncConsultingToSettlement(item) {
     );
   }
   
+  // 유니크 ID 생성 (Date.now + random + listId 조합)
+  const uniqueId = existIdx !== -1 ? consultingData[existIdx].id : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_s`;
+  
   const settlementItem = {
-    id: existIdx !== -1 ? consultingData[existIdx].id : Date.now().toString() + '_s',
+    id: uniqueId,
     listId: item.id,
     year: item.year,
     type: item.type,
