@@ -1285,6 +1285,19 @@ tr.selected { background: var(--primary-light); }
       <button class="modal-close" onclick="closeConfirmationModal()" style="color:white;">×</button>
     </div>
     <div class="modal-body">
+      <!-- 확인서 유형 탭 -->
+      <div style="display:flex;gap:4px;margin-bottom:1rem;">
+        <button type="button" id="confirmTabConstruction" onclick="switchConfirmationTab('construction')" style="padding:0.6rem 1.2rem;border:none;background:#1976d2;color:white;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;">
+          🏗️ 공사정산
+        </button>
+        <button type="button" id="confirmTabConsulting" onclick="switchConfirmationTab('consulting')" style="padding:0.6rem 1.2rem;border:none;background:#e0e0e0;color:#666;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;">
+          📋 기술컨설팅
+        </button>
+        <button type="button" id="confirmTabIntegrated" onclick="switchConfirmationTab('integrated')" style="padding:0.6rem 1.2rem;border:none;background:#e0e0e0;color:#666;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;">
+          📊 통합 확인서
+        </button>
+      </div>
+      
       <div style="background:#fff3e0;padding:1rem;border-radius:8px;margin-bottom:1rem;">
         <p style="margin:0 0 0.75rem 0;font-size:0.9rem;">📌 담당자를 선택하면 해당 담당자의 현장만 표시됩니다.</p>
         <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
@@ -7758,11 +7771,33 @@ function saveAllManagerEmails() {
 }
 
 // ========== 담당자 확인서 모달 ==========
+// 기술컨설팅 데이터 (확인서에서 사용)
+let consultingData = [];
+let filteredConsultingData = [];
+
 let currentConfirmationData = null;
 let currentConfirmationManager = null;
+let currentConfirmationType = 'construction'; // construction, consulting, integrated
+
+// 기술컨설팅 데이터 로드
+function loadConsultingData() {
+  try {
+    const saved = localStorage.getItem('consultingData');
+    if (saved) {
+      consultingData = JSON.parse(saved);
+    }
+  } catch(e) {
+    console.error('기술컨설팅 데이터 로드 실패:', e);
+    consultingData = [];
+  }
+}
 
 function openConfirmationModal() {
   document.getElementById('confirmationModal').classList.add('active');
+  
+  // 기본 탭 설정
+  currentConfirmationType = 'construction';
+  switchConfirmationTab('construction');
   
   // 담당자 목록 채우기
   populateConfirmationManagerSelect();
@@ -7770,12 +7805,46 @@ function openConfirmationModal() {
   renderConfirmationPreview();
 }
 
-function populateConfirmationManagerSelect() {
-  const data = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+// 확인서 탭 전환
+function switchConfirmationTab(tab) {
+  currentConfirmationType = tab;
   
-  // 데이터에서 담당자 추출 + 기본 담당자 목록 병합
-  const managersFromData = data.map(item => item.manager).filter(m => m && m !== '기타');
-  const allManagers = new Set([...HQ_MANAGERS, ...managersFromData]);
+  const tabConstruction = document.getElementById('confirmTabConstruction');
+  const tabConsulting = document.getElementById('confirmTabConsulting');
+  const tabIntegrated = document.getElementById('confirmTabIntegrated');
+  
+  // 모든 탭 비활성화
+  [tabConstruction, tabConsulting, tabIntegrated].forEach(t => {
+    t.style.background = '#e0e0e0';
+    t.style.color = '#666';
+  });
+  
+  // 선택된 탭 활성화
+  if (tab === 'construction') {
+    tabConstruction.style.background = '#1976d2';
+    tabConstruction.style.color = 'white';
+  } else if (tab === 'consulting') {
+    tabConsulting.style.background = '#00897b';
+    tabConsulting.style.color = 'white';
+  } else {
+    tabIntegrated.style.background = '#9c27b0';
+    tabIntegrated.style.color = 'white';
+  }
+  
+  renderConfirmationPreview();
+}
+
+function populateConfirmationManagerSelect() {
+  // 공사정산 데이터
+  const constructionData = settlementData.length > 0 ? settlementData : generateSettlementFromCurrentData();
+  
+  // 기술컨설팅 데이터
+  loadConsultingData();
+  
+  // 모든 담당자 수집
+  const managersFromConstruction = constructionData.map(item => item.manager).filter(m => m && m !== '기타');
+  const managersFromConsulting = consultingData.map(item => item.manager).filter(m => m && m !== '기타');
+  const allManagers = new Set([...HQ_MANAGERS, ...managersFromConstruction, ...managersFromConsulting]);
   const managers = [...allManagers].sort();
   
   const select = document.getElementById('confirmationManagerSelect');
@@ -7827,6 +7896,18 @@ function getFilteredConfirmationData() {
 }
 
 function renderConfirmationPreview() {
+  // 탭에 따라 다른 렌더링 함수 호출
+  if (currentConfirmationType === 'consulting') {
+    renderConsultingConfirmationPreview();
+  } else if (currentConfirmationType === 'integrated') {
+    renderIntegratedConfirmationPreview();
+  } else {
+    renderConstructionConfirmationPreview();
+  }
+}
+
+// 공사정산 확인서 미리보기
+function renderConstructionConfirmationPreview() {
   const { data, managerFilter, settledFilter } = getFilteredConfirmationData();
   
   currentConfirmationData = data;
@@ -7866,10 +7947,11 @@ function renderConfirmationPreview() {
   let html = `
     <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
       <!-- 담당자 정보 -->
-      <div style="background:#ff9800;color:white;padding:1rem;">
+      <div style="background:#1976d2;color:white;padding:1rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <strong style="font-size:1.2rem;">👤 ${managerName}</strong>
+            <span style="font-size:0.85rem;opacity:0.9;">🏗️ 공사정산</span>
+            <strong style="font-size:1.2rem;margin-left:0.5rem;">👤 ${managerName}</strong>
             <span style="margin-left:1rem;font-size:0.85rem;opacity:0.9;">상태: ${statusText}</span>
           </div>
           <div style="font-size:0.85rem;">
@@ -7879,7 +7961,7 @@ function renderConfirmationPreview() {
       </div>
       
       <!-- 요약 -->
-      <div style="padding:1rem;background:#fff3e0;">
+      <div style="padding:1rem;background:#e3f2fd;">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
           <div>
             <div style="font-size:0.75rem;color:#666;">총 건수</div>
@@ -7958,14 +8040,335 @@ function renderConfirmationPreview() {
       </div>
       
       <!-- 총액 -->
-      <div style="background:#ffebee;padding:1rem;text-align:center;border-top:1px solid #ddd;">
-        <span style="color:#c62828;">📌 정산 총액: </span>
-        <strong style="font-size:1.3rem;color:#c62828;">${fmt(totalSettlement)}</strong>
+      <div style="background:#e3f2fd;padding:1rem;text-align:center;border-top:1px solid #ddd;">
+        <span style="color:#1565c0;">📌 공사정산 총액: </span>
+        <strong style="font-size:1.3rem;color:#1565c0;">${fmt(totalSettlement)}</strong>
       </div>
     </div>
   `;
   
   document.getElementById('confirmationPreview').innerHTML = html;
+}
+
+// 기술컨설팅 확인서 미리보기
+function renderConsultingConfirmationPreview() {
+  loadConsultingData();
+  
+  const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+  const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
+  const settledFilter = document.getElementById('confirmationSettledSelect')?.value || '';
+  
+  let data = [...consultingData];
+  
+  // 필터 적용
+  if (yearFilter && yearFilter !== '2024+2025') {
+    data = data.filter(item => item.year === yearFilter);
+  } else if (yearFilter === '2024+2025') {
+    data = data.filter(item => {
+      if (item.year === '2024') return item.settled !== '정산완료';
+      return item.year === '2025';
+    });
+  }
+  
+  if (managerFilter) {
+    data = data.filter(item => item.manager === managerFilter);
+  }
+  
+  if (settledFilter) {
+    data = data.filter(item => item.settled === settledFilter);
+  }
+  
+  if (data.length === 0) {
+    document.getElementById('confirmationPreview').innerHTML = `
+      <div style="text-align:center;padding:2rem;color:#999;">
+        기술컨설팅 데이터가 없습니다. 필터를 확인해주세요.
+      </div>
+    `;
+    return;
+  }
+  
+  const managerName = managerFilter || '전체 담당자';
+  const managerEmail = managerEmails[managerFilter] || '';
+  const statusText = settledFilter || '전체';
+  
+  // 합계 계산
+  let totalBidAmount = 0, totalProfit = 0, totalSettlement = 0;
+  data.forEach(item => {
+    totalBidAmount += item.bidAmount || 0;
+    totalProfit += item.profit || 0;
+    totalSettlement += item.settlement || 0;
+  });
+  
+  // 년도별 분리
+  const data24 = data.filter(item => item.year === '2024');
+  const data25 = data.filter(item => item.year === '2025');
+  const data26 = data.filter(item => item.year === '2026');
+  
+  const total24 = data24.reduce((sum, i) => sum + (i.settlement || 0), 0);
+  const total25 = data25.reduce((sum, i) => sum + (i.settlement || 0), 0);
+  const total26 = data26.reduce((sum, i) => sum + (i.settlement || 0), 0);
+  
+  let html = `
+    <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+      <!-- 담당자 정보 -->
+      <div style="background:#00897b;color:white;padding:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="font-size:0.85rem;opacity:0.9;">📋 기술컨설팅</span>
+            <strong style="font-size:1.2rem;margin-left:0.5rem;">👤 ${managerName}</strong>
+            <span style="margin-left:1rem;font-size:0.85rem;opacity:0.9;">상태: ${statusText}</span>
+          </div>
+          <div style="font-size:0.85rem;">
+            ${managerEmail ? `📧 ${managerEmail}` : '<span style="opacity:0.7;">이메일 미등록</span>'}
+          </div>
+        </div>
+      </div>
+      
+      <!-- 요약 -->
+      <div style="padding:1rem;background:#e0f2f1;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.1rem;font-weight:700;">${data.length}건</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 낙찰금액</div>
+            <div style="font-size:1.1rem;font-weight:700;">${fmt(totalBidAmount)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">정산금액</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#00897b;">${fmt(totalSettlement)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 현장 목록 -->
+      <div style="padding:1rem;max-height:300px;overflow-y:auto;">
+  `;
+  
+  // 년도별 테이블 생성 함수
+  const renderYearTable = (yearData, year, yearTotal, bgColor) => {
+    if (yearData.length === 0) return '';
+    return `
+      <h4 style="margin:0 0 0.5rem 0;color:#00695c;">📅 ${year}년 (${yearData.length}건) - ${fmt(yearTotal)}</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1rem;">
+        <thead>
+          <tr style="background:${bgColor};">
+            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
+            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">공사명</th>
+            <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;">정산금액</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${yearData.map(item => `
+            <tr>
+              <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;color:#666;">${item.project || '-'}</td>
+              <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  };
+  
+  html += renderYearTable(data24, '2024', total24, '#ffecb3');
+  html += renderYearTable(data25, '2025', total25, '#b2dfdb');
+  html += renderYearTable(data26, '2026', total26, '#c8e6c9');
+  
+  html += `
+      </div>
+      
+      <!-- 총액 -->
+      <div style="background:#e0f2f1;padding:1rem;text-align:center;border-top:1px solid #ddd;">
+        <span style="color:#00695c;">📌 기술컨설팅 정산 총액: </span>
+        <strong style="font-size:1.3rem;color:#00695c;">${fmt(totalSettlement)}</strong>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('confirmationPreview').innerHTML = html;
+}
+
+// 통합 확인서 미리보기
+function renderIntegratedConfirmationPreview() {
+  // 공사정산 데이터
+  const { data: constructionData, managerFilter, settledFilter } = getFilteredConfirmationData();
+  
+  // 기술컨설팅 데이터
+  loadConsultingData();
+  const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+  
+  let consultingFiltered = [...consultingData];
+  
+  if (yearFilter && yearFilter !== '2024+2025') {
+    consultingFiltered = consultingFiltered.filter(item => item.year === yearFilter);
+  } else if (yearFilter === '2024+2025') {
+    consultingFiltered = consultingFiltered.filter(item => {
+      if (item.year === '2024') return item.settled !== '정산완료';
+      return item.year === '2025';
+    });
+  }
+  
+  if (managerFilter) {
+    consultingFiltered = consultingFiltered.filter(item => item.manager === managerFilter);
+  }
+  
+  if (settledFilter) {
+    consultingFiltered = consultingFiltered.filter(item => item.settled === settledFilter);
+  }
+  
+  if (constructionData.length === 0 && consultingFiltered.length === 0) {
+    document.getElementById('confirmationPreview').innerHTML = `
+      <div style="text-align:center;padding:2rem;color:#999;">
+        출력할 데이터가 없습니다. 필터를 확인해주세요.
+      </div>
+    `;
+    return;
+  }
+  
+  const managerName = managerFilter || '전체 담당자';
+  const managerEmail = managerEmails[managerFilter] || '';
+  const statusText = settledFilter || '전체';
+  
+  // 공사정산 합계
+  let constructionTotal = 0;
+  constructionData.forEach(item => {
+    constructionTotal += item.realSettlement || 0;
+  });
+  
+  // 기술컨설팅 합계
+  let consultingTotal = 0;
+  consultingFiltered.forEach(item => {
+    consultingTotal += item.settlement || 0;
+  });
+  
+  const grandTotal = constructionTotal + consultingTotal;
+  
+  let html = `
+    <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
+      <!-- 담당자 정보 -->
+      <div style="background:#9c27b0;color:white;padding:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="font-size:0.85rem;opacity:0.9;">📊 통합 확인서</span>
+            <strong style="font-size:1.2rem;margin-left:0.5rem;">👤 ${managerName}</strong>
+            <span style="margin-left:1rem;font-size:0.85rem;opacity:0.9;">상태: ${statusText}</span>
+          </div>
+          <div style="font-size:0.85rem;">
+            ${managerEmail ? `📧 ${managerEmail}` : '<span style="opacity:0.7;">이메일 미등록</span>'}
+          </div>
+        </div>
+      </div>
+      
+      <!-- 통합 요약 -->
+      <div style="padding:1rem;background:#f3e5f5;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div>
+            <div style="font-size:0.75rem;color:#666;">공사정산</div>
+            <div style="font-size:1rem;font-weight:700;color:#1976d2;">${constructionData.length}건</div>
+            <div style="font-size:0.9rem;color:#1976d2;">${fmt(constructionTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">기술컨설팅</div>
+            <div style="font-size:1rem;font-weight:700;color:#00897b;">${consultingFiltered.length}건</div>
+            <div style="font-size:0.9rem;color:#00897b;">${fmt(consultingTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.1rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">정산 총액</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 상세 목록 -->
+      <div style="padding:1rem;max-height:350px;overflow-y:auto;">
+  `;
+  
+  // 공사정산 섹션
+  if (constructionData.length > 0) {
+    html += `
+      <div style="margin-bottom:1.5rem;">
+        <h4 style="margin:0 0 0.5rem 0;color:#1976d2;display:flex;align-items:center;gap:0.5rem;">
+          <span style="background:#1976d2;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">🏗️ 공사정산</span>
+          ${constructionData.length}건 / ${fmt(constructionTotal)}
+        </h4>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:#e3f2fd;">
+              <th style="padding:0.4rem;border:1px solid #ddd;width:50px;">년도</th>
+              <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
+              <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;width:100px;">정산금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${constructionData.map(item => `
+              <tr>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  // 기술컨설팅 섹션
+  if (consultingFiltered.length > 0) {
+    html += `
+      <div>
+        <h4 style="margin:0 0 0.5rem 0;color:#00897b;display:flex;align-items:center;gap:0.5rem;">
+          <span style="background:#00897b;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">📋 기술컨설팅</span>
+          ${consultingFiltered.length}건 / ${fmt(consultingTotal)}
+        </h4>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:#e0f2f1;">
+              <th style="padding:0.4rem;border:1px solid #ddd;width:50px;">년도</th>
+              <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
+              <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;width:100px;">정산금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${consultingFiltered.map(item => `
+              <tr>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  html += `
+      </div>
+      
+      <!-- 총액 -->
+      <div style="background:#f3e5f5;padding:1rem;text-align:center;border-top:1px solid #ddd;">
+        <div style="display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
+          <span style="color:#1976d2;">🏗️ 공사: <strong>${fmt(constructionTotal)}</strong></span>
+          <span style="color:#00897b;">📋 컨설팅: <strong>${fmt(consultingTotal)}</strong></span>
+          <span style="color:#9c27b0;font-size:1.1rem;">📌 총액: <strong style="font-size:1.3rem;">${fmt(grandTotal)}</strong></span>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('confirmationPreview').innerHTML = html;
+}
 }
 
 function generateConfirmationHTML(forPDF = false) {
@@ -8134,15 +8537,27 @@ function generateConfirmationHTML(forPDF = false) {
 }
 
 function downloadConfirmationPDF() {
-  const { data, managerFilter } = getFilteredConfirmationData();
+  const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
+  const managerName = managerFilter || '전체담당자';
   
-  if (data.length === 0) {
+  let html = '';
+  let title = '';
+  
+  if (currentConfirmationType === 'consulting') {
+    html = generateConsultingConfirmationHTML();
+    title = `기술컨설팅_확인서_${managerName}`;
+  } else if (currentConfirmationType === 'integrated') {
+    html = generateIntegratedConfirmationHTML();
+    title = `통합_확인서_${managerName}`;
+  } else {
+    html = generateConfirmationHTML(true);
+    title = `공사정산_확인서_${managerName}`;
+  }
+  
+  if (!html) {
     showToast('출력할 데이터가 없습니다.', 'error');
     return;
   }
-  
-  const managerName = managerFilter || '전체담당자';
-  const html = generateConfirmationHTML(true);
   
   // 인쇄 창으로 PDF 저장
   const printWindow = window.open('', '_blank');
@@ -8151,7 +8566,7 @@ function downloadConfirmationPDF() {
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>정산확인서_${managerName}</title>
+      <title>${title}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
@@ -8170,14 +8585,274 @@ function downloadConfirmationPDF() {
   setTimeout(() => printWindow.print(), 300);
 }
 
-function sendConfirmationEmail() {
-  const { data, managerFilter } = getFilteredConfirmationData();
+// 기술컨설팅 확인서 HTML 생성
+function generateConsultingConfirmationHTML() {
+  loadConsultingData();
   
-  if (data.length === 0) {
-    showToast('발송할 데이터가 없습니다.', 'error');
-    return;
+  const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+  const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
+  const settledFilter = document.getElementById('confirmationSettledSelect')?.value || '';
+  
+  let data = [...consultingData];
+  
+  if (yearFilter && yearFilter !== '2024+2025') {
+    data = data.filter(item => item.year === yearFilter);
+  } else if (yearFilter === '2024+2025') {
+    data = data.filter(item => {
+      if (item.year === '2024') return item.settled !== '정산완료';
+      return item.year === '2025';
+    });
   }
   
+  if (managerFilter) {
+    data = data.filter(item => item.manager === managerFilter);
+  }
+  
+  if (settledFilter) {
+    data = data.filter(item => item.settled === settledFilter);
+  }
+  
+  if (data.length === 0) return '';
+  
+  const managerName = managerFilter || '전체 담당자';
+  const statusText = settledFilter || '전체';
+  
+  let totalBidAmount = 0, totalProfit = 0, totalSettlement = 0;
+  data.forEach(item => {
+    totalBidAmount += item.bidAmount || 0;
+    totalProfit += item.profit || 0;
+    totalSettlement += item.settlement || 0;
+  });
+  
+  const today = new Date();
+  const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
+  
+  let html = `
+    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:20px;max-width:800px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #00897b;padding-bottom:1rem;">
+        <h2 style="margin:0 0 0.5rem 0;font-size:1.5rem;color:#00897b;">📋 기술컨설팅 정산 확인서</h2>
+        <p style="margin:0;color:#666;font-size:0.9rem;">담당자: <strong style="color:#00897b;font-size:1.1rem;">${managerName}</strong></p>
+        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.8rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
+      </div>
+      
+      <div style="background:#e0f2f1;padding:1rem;border-radius:8px;margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.2rem;font-weight:700;">${data.length}건</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 낙찰금액</div>
+            <div style="font-size:1.2rem;font-weight:700;">${fmt(totalBidAmount)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1.2rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">정산금액 (15%)</div>
+            <div style="font-size:1.2rem;font-weight:700;color:#00897b;">${fmt(totalSettlement)}</div>
+          </div>
+        </div>
+      </div>
+      
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:1.5rem;">
+        <thead>
+          <tr style="background:#00897b;color:white;">
+            <th style="padding:0.5rem;border:1px solid #00695c;">년도</th>
+            <th style="padding:0.5rem;border:1px solid #00695c;text-align:left;">현장명</th>
+            <th style="padding:0.5rem;border:1px solid #00695c;text-align:left;">공사명</th>
+            <th style="padding:0.5rem;border:1px solid #00695c;text-align:right;">정산금액</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(item => `
+            <tr>
+              <td style="padding:0.5rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+              <td style="padding:0.5rem;border:1px solid #ddd;">${item.site || ''}</td>
+              <td style="padding:0.5rem;border:1px solid #ddd;font-size:0.8rem;color:#666;">${item.project || '-'}</td>
+              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:#b2dfdb;font-weight:700;">
+            <td colspan="3" style="padding:0.5rem;border:1px solid #ddd;">합계</td>
+            <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00695c;">${fmt(totalSettlement)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      
+      <div style="background:#e8f5e9;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #a5d6a7;">
+        <p style="margin:0;text-align:center;font-size:0.95rem;color:#2e7d32;">
+          <strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong>
+        </p>
+      </div>
+      
+      <div style="text-align:center;padding-top:1rem;color:#999;font-size:0.75rem;">
+        ㈜석민이엔씨 정산 관리 시스템
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+// 통합 확인서 HTML 생성
+function generateIntegratedConfirmationHTML() {
+  const { data: constructionData, managerFilter, settledFilter } = getFilteredConfirmationData();
+  
+  loadConsultingData();
+  const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+  
+  let consultingFiltered = [...consultingData];
+  
+  if (yearFilter && yearFilter !== '2024+2025') {
+    consultingFiltered = consultingFiltered.filter(item => item.year === yearFilter);
+  } else if (yearFilter === '2024+2025') {
+    consultingFiltered = consultingFiltered.filter(item => {
+      if (item.year === '2024') return item.settled !== '정산완료';
+      return item.year === '2025';
+    });
+  }
+  
+  if (managerFilter) {
+    consultingFiltered = consultingFiltered.filter(item => item.manager === managerFilter);
+  }
+  
+  if (settledFilter) {
+    consultingFiltered = consultingFiltered.filter(item => item.settled === settledFilter);
+  }
+  
+  if (constructionData.length === 0 && consultingFiltered.length === 0) return '';
+  
+  const managerName = managerFilter || '전체 담당자';
+  const statusText = settledFilter || '전체';
+  
+  let constructionTotal = constructionData.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
+  let consultingTotal = consultingFiltered.reduce((sum, i) => sum + (i.settlement || 0), 0);
+  const grandTotal = constructionTotal + consultingTotal;
+  
+  const today = new Date();
+  const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
+  
+  let html = `
+    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:20px;max-width:800px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #9c27b0;padding-bottom:1rem;">
+        <h2 style="margin:0 0 0.5rem 0;font-size:1.5rem;color:#9c27b0;">📊 통합 정산 확인서</h2>
+        <p style="margin:0;color:#666;font-size:0.9rem;">담당자: <strong style="color:#9c27b0;font-size:1.1rem;">${managerName}</strong></p>
+        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.8rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
+      </div>
+      
+      <div style="background:#f3e5f5;padding:1rem;border-radius:8px;margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+          <div>
+            <div style="font-size:0.75rem;color:#666;">🏗️ 공사정산</div>
+            <div style="font-size:1rem;font-weight:700;">${constructionData.length}건</div>
+            <div style="font-size:0.9rem;color:#1976d2;">${fmt(constructionTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">📋 기술컨설팅</div>
+            <div style="font-size:1rem;font-weight:700;">${consultingFiltered.length}건</div>
+            <div style="font-size:0.9rem;color:#00897b;">${fmt(consultingTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">총 건수</div>
+            <div style="font-size:1.2rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;color:#666;">정산 총액</div>
+            <div style="font-size:1.3rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
+          </div>
+        </div>
+      </div>
+  `;
+  
+  // 공사정산 섹션
+  if (constructionData.length > 0) {
+    html += `
+      <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:#1976d2;background:#e3f2fd;padding:0.5rem;border-radius:4px;">
+          🏗️ 공사정산 (${constructionData.length}건) - ${fmt(constructionTotal)}
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:#1976d2;color:white;">
+              <th style="padding:0.4rem;border:1px solid #1565c0;">년도</th>
+              <th style="padding:0.4rem;border:1px solid #1565c0;text-align:left;">현장명</th>
+              <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;">정산금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${constructionData.map(item => `
+              <tr>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  // 기술컨설팅 섹션
+  if (consultingFiltered.length > 0) {
+    html += `
+      <div style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:#00897b;background:#e0f2f1;padding:0.5rem;border-radius:4px;">
+          📋 기술컨설팅 (${consultingFiltered.length}건) - ${fmt(consultingTotal)}
+        </h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+          <thead>
+            <tr style="background:#00897b;color:white;">
+              <th style="padding:0.4rem;border:1px solid #00695c;">년도</th>
+              <th style="padding:0.4rem;border:1px solid #00695c;text-align:left;">현장명</th>
+              <th style="padding:0.4rem;border:1px solid #00695c;text-align:right;">정산금액</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${consultingFiltered.map(item => `
+              <tr>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  html += `
+      <div style="background:#ffebee;padding:1rem;border-radius:8px;margin-bottom:1rem;text-align:center;border:1px solid #ef9a9a;">
+        <div style="color:#666;margin-bottom:0.5rem;">
+          <span style="margin-right:1.5rem;">🏗️ 공사: <strong style="color:#1976d2;">${fmt(constructionTotal)}</strong></span>
+          <span>📋 컨설팅: <strong style="color:#00897b;">${fmt(consultingTotal)}</strong></span>
+        </div>
+        <span style="font-size:1rem;color:#c62828;">📌 정산 총액: </span>
+        <strong style="font-size:1.5rem;color:#c62828;">${fmt(grandTotal)}</strong>
+      </div>
+      
+      <div style="background:#e8f5e9;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #a5d6a7;">
+        <p style="margin:0;text-align:center;font-size:0.95rem;color:#2e7d32;">
+          <strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong>
+        </p>
+      </div>
+      
+      <div style="text-align:center;padding-top:1rem;color:#999;font-size:0.75rem;">
+        ㈜석민이엔씨 정산 관리 시스템
+      </div>
+    </div>
+  `;
+  
+  return html;
+}
+
+function sendConfirmationEmail() {
+  const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
   const managerName = managerFilter || '전체 담당자';
   const managerEmail = managerEmails[managerFilter] || '';
   
@@ -8195,20 +8870,86 @@ function sendConfirmationEmail() {
     return;
   }
   
-  // 합계 계산
+  // 탭에 따라 다른 데이터 계산
   let totalSettlement = 0;
-  data.forEach(item => {
-    totalSettlement += item.realSettlement || 0;
-  });
+  let totalCount = 0;
+  let typeText = '';
+  
+  if (currentConfirmationType === 'consulting') {
+    loadConsultingData();
+    const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+    const settledFilter = document.getElementById('confirmationSettledSelect')?.value || '';
+    
+    let data = [...consultingData];
+    if (yearFilter && yearFilter !== '2024+2025') {
+      data = data.filter(item => item.year === yearFilter);
+    }
+    if (managerFilter) {
+      data = data.filter(item => item.manager === managerFilter);
+    }
+    if (settledFilter) {
+      data = data.filter(item => item.settled === settledFilter);
+    }
+    
+    data.forEach(item => {
+      totalSettlement += item.settlement || 0;
+    });
+    totalCount = data.length;
+    typeText = '기술컨설팅 ';
+    
+  } else if (currentConfirmationType === 'integrated') {
+    // 공사정산
+    const { data: constructionData } = getFilteredConfirmationData();
+    constructionData.forEach(item => {
+      totalSettlement += item.realSettlement || 0;
+    });
+    
+    // 기술컨설팅
+    loadConsultingData();
+    const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
+    const settledFilter = document.getElementById('confirmationSettledSelect')?.value || '';
+    
+    let consultingFiltered = [...consultingData];
+    if (yearFilter && yearFilter !== '2024+2025') {
+      consultingFiltered = consultingFiltered.filter(item => item.year === yearFilter);
+    }
+    if (managerFilter) {
+      consultingFiltered = consultingFiltered.filter(item => item.manager === managerFilter);
+    }
+    if (settledFilter) {
+      consultingFiltered = consultingFiltered.filter(item => item.settled === settledFilter);
+    }
+    
+    consultingFiltered.forEach(item => {
+      totalSettlement += item.settlement || 0;
+    });
+    
+    totalCount = constructionData.length + consultingFiltered.length;
+    typeText = '통합(공사+컨설팅) ';
+    
+  } else {
+    // 공사정산
+    const { data } = getFilteredConfirmationData();
+    data.forEach(item => {
+      totalSettlement += item.realSettlement || 0;
+    });
+    totalCount = data.length;
+    typeText = '공사 ';
+  }
+  
+  if (totalCount === 0) {
+    showToast('발송할 데이터가 없습니다.', 'error');
+    return;
+  }
   
   // 메일 제목 및 본문
-  const subject = encodeURIComponent(`[정산확인요청] ${managerName}님 정산내역 확인 요청드립니다`);
+  const subject = encodeURIComponent(`[${typeText}정산확인요청] ${managerName}님 정산내역 확인 요청드립니다`);
   const body = encodeURIComponent(`${managerName}님 안녕하세요.
 
-정산 내역 확인을 요청드립니다.
+${typeText}정산 내역 확인을 요청드립니다.
 
 ■ 정산 총액: ${fmt(totalSettlement)}
-■ 대상 건수: ${data.length}건
+■ 대상 건수: ${totalCount}건
 
 상세 내역은 첨부된 PDF 파일을 확인해주세요.
 
@@ -8225,21 +8966,7 @@ function sendConfirmationEmail() {
 }
 
 // ========== 기술컨설팅 정산관리 ==========
-let consultingData = [];
-let filteredConsultingData = [];
-
-// 기술컨설팅 데이터 로드
-function loadConsultingData() {
-  try {
-    const saved = localStorage.getItem('consultingData');
-    if (saved) {
-      consultingData = JSON.parse(saved);
-    }
-  } catch(e) {
-    console.error('기술컨설팅 데이터 로드 실패:', e);
-    consultingData = [];
-  }
-}
+// (consultingData, filteredConsultingData, loadConsultingData는 담당자 확인서 모달 섹션에서 선언됨)
 
 // 기술컨설팅 데이터 저장
 function saveConsultingData() {
