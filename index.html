@@ -9101,6 +9101,9 @@ function syncAllConsultingListToSettlement() {
 
 // 기술컨설팅 등록 모달 열기
 function openConsultingAddModal(editId = null) {
+  // 최신 데이터 로드
+  loadConsultingData();
+  
   document.getElementById('consultingAddModal').classList.add('active');
   document.getElementById('consultingEditId').value = '';
   document.getElementById('consultingYear').value = '2025';
@@ -9138,6 +9141,13 @@ function openConsultingAddModal(editId = null) {
       document.getElementById('consultingOtherExp').value = item.otherExp || '';
       managerSelect.value = item.manager || '';
       document.getElementById('consultingAddModalTitle').textContent = '📋 기술컨설팅 수정';
+    } else {
+      // ID로 못 찾으면 테이블 새로고침
+      console.warn('ID를 찾을 수 없음:', editId);
+      showToast('데이터를 찾을 수 없습니다. 테이블을 새로고침합니다.', 'error');
+      renderConsultingTable();
+      document.getElementById('consultingAddModal').classList.remove('active');
+      return;
     }
   }
   
@@ -9203,6 +9213,9 @@ function filterConsultingData() {
 
 // 기술컨설팅 테이블 렌더링
 function renderConsultingTable() {
+  // 최신 데이터 로드
+  loadConsultingData();
+  
   // 필터 적용
   const yearFilter = document.getElementById('consultingYearFilter').value;
   const typeFilter = document.getElementById('consultingTypeFilter').value;
