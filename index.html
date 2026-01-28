@@ -7949,12 +7949,17 @@ function renderConstructionConfirmationPreview() {
   const statusText = settledFilter || '전체';
   
   // 합계 계산
-  let totalAmount = 0, totalProfit = 0, totalSettlement = 0;
+  let totalAmount = 0, totalMaterial = 0, totalLabor = 0, totalExpense = 0, totalProfit = 0, totalSettlement = 0;
   data.forEach(item => {
     totalAmount += item.amount || 0;
+    totalMaterial += item.material || 0;
+    totalLabor += item.laborTotal || item.labor || 0;
+    totalExpense += item.expenseTotal || 0;
     totalProfit += item.profit || 0;
     totalSettlement += item.realSettlement || 0;
   });
+  const totalCost = totalMaterial + totalLabor + totalExpense;
+  const avgProfitRate = totalAmount > 0 ? ((totalProfit / totalAmount) * 100).toFixed(1) : '0.0';
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
@@ -7963,8 +7968,80 @@ function renderConstructionConfirmationPreview() {
   const data24 = data.filter(item => String(item.year).includes('24'));
   const data25 = data.filter(item => String(item.year).includes('25'));
   
-  const total24 = data24.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
-  const total25 = data25.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
+  // 24년 합계
+  const totals24 = data24.reduce((acc, i) => ({
+    amount: acc.amount + (i.amount || 0),
+    material: acc.material + (i.material || 0),
+    labor: acc.labor + (i.laborTotal || i.labor || 0),
+    expense: acc.expense + (i.expenseTotal || 0),
+    profit: acc.profit + (i.profit || 0),
+    settlement: acc.settlement + (i.realSettlement || 0)
+  }), { amount: 0, material: 0, labor: 0, expense: 0, profit: 0, settlement: 0 });
+  totals24.cost = totals24.material + totals24.labor + totals24.expense;
+  totals24.profitRate = totals24.amount > 0 ? ((totals24.profit / totals24.amount) * 100).toFixed(1) : '0.0';
+  
+  // 25년 합계
+  const totals25 = data25.reduce((acc, i) => ({
+    amount: acc.amount + (i.amount || 0),
+    material: acc.material + (i.material || 0),
+    labor: acc.labor + (i.laborTotal || i.labor || 0),
+    expense: acc.expense + (i.expenseTotal || 0),
+    profit: acc.profit + (i.profit || 0),
+    settlement: acc.settlement + (i.realSettlement || 0)
+  }), { amount: 0, material: 0, labor: 0, expense: 0, profit: 0, settlement: 0 });
+  totals25.cost = totals25.material + totals25.labor + totals25.expense;
+  totals25.profitRate = totals25.amount > 0 ? ((totals25.profit / totals25.amount) * 100).toFixed(1) : '0.0';
+  
+  // 테이블 헤더 생성 함수
+  const createTableHeader = (bgColor) => `
+    <tr style="background:${bgColor};">
+      <th style="padding:0.4rem;border:1px solid #ddd;white-space:nowrap;">NO</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;min-width:120px;">현장명</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">공사금액</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">자재비</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">노무비</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">경비</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">지출합계</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">이익금</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:center;white-space:nowrap;">이익률</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">실정산금액</th>
+    </tr>
+  `;
+  
+  // 테이블 행 생성 함수
+  const createTableRow = (item) => {
+    const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
+    const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+    return `
+      <tr>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}">${(item.site || '').substring(0, 15)}${(item.site || '').length > 15 ? '...' : ''}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.amount)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.material)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.laborTotal || item.labor)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.expenseTotal)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(cost)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${(item.profit || 0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:600;">${fmt(item.profit)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#1565c0;font-weight:700;">${fmt(item.realSettlement)}</td>
+      </tr>
+    `;
+  };
+  
+  // 소계 행 생성 함수
+  const createSubtotalRow = (label, totals, bgColor) => `
+    <tr style="background:${bgColor};font-weight:700;">
+      <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${label}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.amount)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.material)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.labor)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.expense)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(totals.cost)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totals.profit)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(totals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${totals.profitRate}%</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#1565c0;">${fmt(totals.settlement)}</td>
+    </tr>
+  `;
   
   let html = `
     <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
@@ -7972,7 +8049,7 @@ function renderConstructionConfirmationPreview() {
       <div style="background:#1976d2;color:white;padding:1rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <span style="font-size:0.85rem;opacity:0.9;">🏗️ 공사정산</span>
+            <span style="font-size:0.85rem;opacity:0.9;">🏗️ 공사정산 확인서</span>
             <strong style="font-size:1.2rem;margin-left:0.5rem;">👤 ${managerName}</strong>
             <span style="margin-left:1rem;font-size:0.85rem;opacity:0.9;">상태: ${statusText}</span>
           </div>
@@ -7984,50 +8061,43 @@ function renderConstructionConfirmationPreview() {
       
       <!-- 요약 -->
       <div style="padding:1rem;background:#e3f2fd;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.1rem;font-weight:700;">${data.length}건</div>
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${data.length}건</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 공사금액</div>
-            <div style="font-size:1.1rem;font-weight:700;">${fmt(totalAmount)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 공사금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmt(totalAmount)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
-            <div style="font-size:1.1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 지출</div>
+            <div style="font-size:1rem;font-weight:700;color:#e65100;">${fmt(totalCost)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">정산금액</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#1565c0;">${fmt(totalSettlement)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 이익금 (${avgProfitRate}%)</div>
+            <div style="font-size:1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:#666;">실정산금액</div>
+            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmt(totalSettlement)}</div>
           </div>
         </div>
       </div>
       
       <!-- 현장 목록 -->
-      <div style="padding:1rem;max-height:300px;overflow-y:auto;">
+      <div style="padding:0.5rem;max-height:400px;overflow-y:auto;">
   `;
   
   // 24년 데이터
   if (data24.length > 0) {
     html += `
-      <h4 style="margin:0 0 0.5rem 0;color:#e65100;">📅 2024년 (${data24.length}건) - ${fmt(total24)}</h4>
-      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1rem;">
-        <thead>
-          <tr style="background:#ffecb3;">
-            <th style="padding:0.4rem;border:1px solid #ddd;">NO</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;">정산금액</th>
-          </tr>
-        </thead>
+      <h4 style="margin:0.5rem 0;color:#e65100;font-size:0.9rem;">📅 2024년 (${data24.length}건)</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin-bottom:0.5rem;">
+        <thead>${createTableHeader('#ffecb3')}</thead>
         <tbody>
-          ${data24.map(item => `
-            <tr>
-              <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
-            </tr>
-          `).join('')}
+          ${data24.map(item => createTableRow(item)).join('')}
+          ${createSubtotalRow('2024년 소계', totals24, '#fff8e1')}
         </tbody>
       </table>
     `;
@@ -8036,23 +8106,12 @@ function renderConstructionConfirmationPreview() {
   // 25년 데이터
   if (data25.length > 0) {
     html += `
-      <h4 style="margin:0 0 0.5rem 0;color:#1565c0;">📅 2025년 (${data25.length}건) - ${fmt(total25)}</h4>
-      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-        <thead>
-          <tr style="background:#bbdefb;">
-            <th style="padding:0.4rem;border:1px solid #ddd;">NO</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;">정산금액</th>
-          </tr>
-        </thead>
+      <h4 style="margin:0.5rem 0;color:#1565c0;font-size:0.9rem;">📅 2025년 (${data25.length}건)</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+        <thead>${createTableHeader('#bbdefb')}</thead>
         <tbody>
-          ${data25.map(item => `
-            <tr>
-              <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
-            </tr>
-          `).join('')}
+          ${data25.map(item => createTableRow(item)).join('')}
+          ${createSubtotalRow('2025년 소계', totals25, '#e3f2fd')}
         </tbody>
       </table>
     `;
@@ -8062,9 +8121,16 @@ function renderConstructionConfirmationPreview() {
       </div>
       
       <!-- 총액 -->
-      <div style="background:#e3f2fd;padding:1rem;text-align:center;border-top:1px solid #ddd;">
-        <span style="color:#1565c0;">📌 공사정산 총액: </span>
-        <strong style="font-size:1.3rem;color:#1565c0;">${fmt(totalSettlement)}</strong>
+      <div style="background:#1976d2;color:white;padding:1rem;border-top:2px solid #1565c0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:0.85rem;">
+            📌 총 ${data.length}건 | 공사금액: ${fmt(totalAmount)} | 지출: ${fmt(totalCost)} | 이익: ${fmt(totalProfit)} (${avgProfitRate}%)
+          </div>
+          <div>
+            <span style="font-size:0.9rem;">실정산 총액: </span>
+            <strong style="font-size:1.4rem;">${fmt(totalSettlement)}</strong>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -8114,21 +8180,92 @@ function renderConsultingConfirmationPreview() {
   const statusText = settledFilter || '전체';
   
   // 합계 계산
-  let totalBidAmount = 0, totalProfit = 0, totalSettlement = 0;
+  let totalBidAmount = 0, totalExecAmount = 0, totalCompanyExp = 0, totalOtherExp = 0, totalProfit = 0, totalSettlement = 0;
   data.forEach(item => {
     totalBidAmount += item.bidAmount || 0;
+    totalExecAmount += item.execAmount || 0;
+    totalCompanyExp += item.companyExp || 0;
+    totalOtherExp += item.otherExp || 0;
     totalProfit += item.profit || 0;
     totalSettlement += item.settlement || 0;
   });
+  const totalExpense = totalExecAmount + totalCompanyExp + totalOtherExp;
+  const avgProfitRate = totalBidAmount > 0 ? ((totalProfit / totalBidAmount) * 100).toFixed(1) : '0.0';
   
   // 년도별 분리
   const data24 = data.filter(item => item.year === '2024');
   const data25 = data.filter(item => item.year === '2025');
   const data26 = data.filter(item => item.year === '2026');
   
-  const total24 = data24.reduce((sum, i) => sum + (i.settlement || 0), 0);
-  const total25 = data25.reduce((sum, i) => sum + (i.settlement || 0), 0);
-  const total26 = data26.reduce((sum, i) => sum + (i.settlement || 0), 0);
+  // 년도별 합계 계산 함수
+  const calcYearTotals = (yearData) => {
+    const totals = yearData.reduce((acc, i) => ({
+      bidAmount: acc.bidAmount + (i.bidAmount || 0),
+      execAmount: acc.execAmount + (i.execAmount || 0),
+      companyExp: acc.companyExp + (i.companyExp || 0),
+      otherExp: acc.otherExp + (i.otherExp || 0),
+      profit: acc.profit + (i.profit || 0),
+      settlement: acc.settlement + (i.settlement || 0)
+    }), { bidAmount: 0, execAmount: 0, companyExp: 0, otherExp: 0, profit: 0, settlement: 0 });
+    totals.totalExpense = totals.execAmount + totals.companyExp + totals.otherExp;
+    totals.profitRate = totals.bidAmount > 0 ? ((totals.profit / totals.bidAmount) * 100).toFixed(1) : '0.0';
+    return totals;
+  };
+  
+  const totals24 = calcYearTotals(data24);
+  const totals25 = calcYearTotals(data25);
+  const totals26 = calcYearTotals(data26);
+  
+  // 테이블 헤더 생성 함수
+  const createTableHeader = (bgColor) => `
+    <tr style="background:${bgColor};">
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;min-width:100px;">현장명</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;min-width:80px;">공사명</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">낙찰금액</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">실행금액</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">본사경비</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">기타비용</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">지출합계</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">이익금</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:center;white-space:nowrap;">이익률</th>
+      <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;white-space:nowrap;">실정산금액</th>
+    </tr>
+  `;
+  
+  // 테이블 행 생성 함수
+  const createTableRow = (item) => {
+    const itemExpense = (item.execAmount || 0) + (item.companyExp || 0) + (item.otherExp || 0);
+    const profitRate = item.profitRate || (item.bidAmount > 0 ? ((item.profit / item.bidAmount) * 100).toFixed(1) : '0.0');
+    return `
+      <tr>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}">${(item.site || '').substring(0, 12)}${(item.site || '').length > 12 ? '...' : ''}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.7rem;color:#666;" title="${item.project || ''}">${(item.project || '-').substring(0, 10)}${(item.project || '').length > 10 ? '...' : ''}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#00897b;font-weight:600;">${fmt(item.bidAmount)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.execAmount)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.companyExp)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.otherExp)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(itemExpense)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${(item.profit || 0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:600;">${fmt(item.profit)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#00897b;font-weight:700;">${fmt(item.settlement)}</td>
+      </tr>
+    `;
+  };
+  
+  // 소계 행 생성 함수
+  const createSubtotalRow = (label, totals, bgColor) => `
+    <tr style="background:${bgColor};font-weight:700;">
+      <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${label}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.bidAmount)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.execAmount)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.companyExp)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.otherExp)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(totals.totalExpense)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totals.profit)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(totals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${totals.profitRate}%</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#00897b;">${fmt(totals.settlement)}</td>
+    </tr>
+  `;
   
   let html = `
     <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
@@ -8136,7 +8273,7 @@ function renderConsultingConfirmationPreview() {
       <div style="background:#00897b;color:white;padding:1rem;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <span style="font-size:0.85rem;opacity:0.9;">📋 기술컨설팅</span>
+            <span style="font-size:0.85rem;opacity:0.9;">📋 기술컨설팅 확인서</span>
             <strong style="font-size:1.2rem;margin-left:0.5rem;">👤 ${managerName}</strong>
             <span style="margin-left:1rem;font-size:0.85rem;opacity:0.9;">상태: ${statusText}</span>
           </div>
@@ -8148,67 +8285,67 @@ function renderConsultingConfirmationPreview() {
       
       <!-- 요약 -->
       <div style="padding:1rem;background:#e0f2f1;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.1rem;font-weight:700;">${data.length}건</div>
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${data.length}건</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 낙찰금액</div>
-            <div style="font-size:1.1rem;font-weight:700;">${fmt(totalBidAmount)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 낙찰금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmt(totalBidAmount)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
-            <div style="font-size:1.1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 지출</div>
+            <div style="font-size:1rem;font-weight:700;color:#e65100;">${fmt(totalExpense)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">정산금액</div>
-            <div style="font-size:1.1rem;font-weight:700;color:#00897b;">${fmt(totalSettlement)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 이익금 (${avgProfitRate}%)</div>
+            <div style="font-size:1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:#666;">실정산금액</div>
+            <div style="font-size:1rem;font-weight:700;color:#00897b;">${fmt(totalSettlement)}</div>
           </div>
         </div>
       </div>
       
       <!-- 현장 목록 -->
-      <div style="padding:1rem;max-height:300px;overflow-y:auto;">
+      <div style="padding:0.5rem;max-height:400px;overflow-y:auto;">
   `;
   
   // 년도별 테이블 생성 함수
-  const renderYearTable = (yearData, year, yearTotal, bgColor) => {
+  const renderYearTable = (yearData, year, totals, headerBg, subtotalBg) => {
     if (yearData.length === 0) return '';
     return `
-      <h4 style="margin:0 0 0.5rem 0;color:#00695c;">📅 ${year}년 (${yearData.length}건) - ${fmt(yearTotal)}</h4>
-      <table style="width:100%;border-collapse:collapse;font-size:0.8rem;margin-bottom:1rem;">
-        <thead>
-          <tr style="background:${bgColor};">
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">공사명</th>
-            <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;">정산금액</th>
-          </tr>
-        </thead>
+      <h4 style="margin:0.5rem 0;color:#00695c;font-size:0.9rem;">📅 ${year}년 (${yearData.length}건)</h4>
+      <table style="width:100%;border-collapse:collapse;font-size:0.75rem;margin-bottom:0.5rem;">
+        <thead>${createTableHeader(headerBg)}</thead>
         <tbody>
-          ${yearData.map(item => `
-            <tr>
-              <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;color:#666;">${item.project || '-'}</td>
-              <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
-            </tr>
-          `).join('')}
+          ${yearData.map(item => createTableRow(item)).join('')}
+          ${createSubtotalRow(`${year}년 소계`, totals, subtotalBg)}
         </tbody>
       </table>
     `;
   };
   
-  html += renderYearTable(data24, '2024', total24, '#ffecb3');
-  html += renderYearTable(data25, '2025', total25, '#b2dfdb');
-  html += renderYearTable(data26, '2026', total26, '#c8e6c9');
+  html += renderYearTable(data24, '2024', totals24, '#ffecb3', '#fff8e1');
+  html += renderYearTable(data25, '2025', totals25, '#b2dfdb', '#e0f2f1');
+  html += renderYearTable(data26, '2026', totals26, '#c8e6c9', '#e8f5e9');
   
   html += `
       </div>
       
       <!-- 총액 -->
-      <div style="background:#e0f2f1;padding:1rem;text-align:center;border-top:1px solid #ddd;">
-        <span style="color:#00695c;">📌 기술컨설팅 정산 총액: </span>
-        <strong style="font-size:1.3rem;color:#00695c;">${fmt(totalSettlement)}</strong>
+      <div style="background:#00897b;color:white;padding:1rem;border-top:2px solid #00695c;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:0.85rem;">
+            📌 총 ${data.length}건 | 낙찰금액: ${fmt(totalBidAmount)} | 지출: ${fmt(totalExpense)} | 이익: ${fmt(totalProfit)} (${avgProfitRate}%)
+          </div>
+          <div>
+            <span style="font-size:0.9rem;">실정산 총액: </span>
+            <strong style="font-size:1.4rem;">${fmt(totalSettlement)}</strong>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -8258,18 +8395,33 @@ function renderIntegratedConfirmationPreview() {
   const statusText = settledFilter || '전체';
   
   // 공사정산 합계
-  let constructionTotal = 0;
-  constructionData.forEach(item => {
-    constructionTotal += item.realSettlement || 0;
-  });
+  const constructionTotals = constructionData.reduce((acc, item) => ({
+    amount: acc.amount + (item.amount || 0),
+    material: acc.material + (item.material || 0),
+    labor: acc.labor + (item.laborTotal || item.labor || 0),
+    expense: acc.expense + (item.expenseTotal || 0),
+    profit: acc.profit + (item.profit || 0),
+    settlement: acc.settlement + (item.realSettlement || 0)
+  }), { amount: 0, material: 0, labor: 0, expense: 0, profit: 0, settlement: 0 });
+  constructionTotals.cost = constructionTotals.material + constructionTotals.labor + constructionTotals.expense;
+  constructionTotals.profitRate = constructionTotals.amount > 0 ? ((constructionTotals.profit / constructionTotals.amount) * 100).toFixed(1) : '0.0';
   
   // 기술컨설팅 합계
-  let consultingTotal = 0;
-  consultingFiltered.forEach(item => {
-    consultingTotal += item.settlement || 0;
-  });
+  const consultingTotals = consultingFiltered.reduce((acc, item) => ({
+    bidAmount: acc.bidAmount + (item.bidAmount || 0),
+    execAmount: acc.execAmount + (item.execAmount || 0),
+    companyExp: acc.companyExp + (item.companyExp || 0),
+    otherExp: acc.otherExp + (item.otherExp || 0),
+    profit: acc.profit + (item.profit || 0),
+    settlement: acc.settlement + (item.settlement || 0)
+  }), { bidAmount: 0, execAmount: 0, companyExp: 0, otherExp: 0, profit: 0, settlement: 0 });
+  consultingTotals.totalExpense = consultingTotals.execAmount + consultingTotals.companyExp + consultingTotals.otherExp;
+  consultingTotals.profitRate = consultingTotals.bidAmount > 0 ? ((consultingTotals.profit / consultingTotals.bidAmount) * 100).toFixed(1) : '0.0';
   
-  const grandTotal = constructionTotal + consultingTotal;
+  const grandTotal = constructionTotals.settlement + consultingTotals.settlement;
+  const grandProfit = constructionTotals.profit + consultingTotals.profit;
+  const grandAmount = constructionTotals.amount + consultingTotals.bidAmount;
+  const grandCost = constructionTotals.cost + consultingTotals.totalExpense;
   
   let html = `
     <div style="border:1px solid #ddd;border-radius:8px;overflow:hidden;">
@@ -8289,56 +8441,78 @@ function renderIntegratedConfirmationPreview() {
       
       <!-- 통합 요약 -->
       <div style="padding:1rem;background:#f3e5f5;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;color:#666;">공사정산</div>
-            <div style="font-size:1rem;font-weight:700;color:#1976d2;">${constructionData.length}건</div>
-            <div style="font-size:0.9rem;color:#1976d2;">${fmt(constructionTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+            <div style="font-size:0.65rem;color:#888;">공사${constructionData.length} + 컨설팅${consultingFiltered.length}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">기술컨설팅</div>
-            <div style="font-size:1rem;font-weight:700;color:#00897b;">${consultingFiltered.length}건</div>
-            <div style="font-size:0.9rem;color:#00897b;">${fmt(consultingTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 계약금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmt(grandAmount)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.1rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+            <div style="font-size:0.7rem;color:#666;">총 지출</div>
+            <div style="font-size:1rem;font-weight:700;color:#e65100;">${fmt(grandCost)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">정산 총액</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 이익금</div>
+            <div style="font-size:1rem;font-weight:700;color:${grandProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(grandProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:#666;">정산 총액</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
           </div>
         </div>
       </div>
       
       <!-- 상세 목록 -->
-      <div style="padding:1rem;max-height:350px;overflow-y:auto;">
+      <div style="padding:0.5rem;max-height:400px;overflow-y:auto;">
   `;
   
   // 공사정산 섹션
   if (constructionData.length > 0) {
     html += `
-      <div style="margin-bottom:1.5rem;">
-        <h4 style="margin:0 0 0.5rem 0;color:#1976d2;display:flex;align-items:center;gap:0.5rem;">
-          <span style="background:#1976d2;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">🏗️ 공사정산</span>
-          ${constructionData.length}건 / ${fmt(constructionTotal)}
+      <div style="margin-bottom:1rem;">
+        <h4 style="margin:0 0 0.5rem 0;color:#1976d2;display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;">
+          <span style="background:#1976d2;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;">🏗️ 공사정산</span>
+          ${constructionData.length}건
         </h4>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
           <thead>
             <tr style="background:#e3f2fd;">
-              <th style="padding:0.4rem;border:1px solid #ddd;width:50px;">년도</th>
-              <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
-              <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;width:100px;">정산금액</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">년도</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:left;">현장명</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">공사금액</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">지출합계</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:center;">이익률</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">실정산</th>
             </tr>
           </thead>
           <tbody>
-            ${constructionData.map(item => `
+            ${constructionData.map(item => {
+              const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
+              const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+              return `
               <tr>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;font-size:0.65rem;" title="${item.site}">${(item.site || '').substring(0, 12)}${(item.site || '').length > 12 ? '...' : ''}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(cost)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#1565c0;">${fmt(item.realSettlement)}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
+            <tr style="background:#bbdefb;font-weight:700;">
+              <td colspan="2" style="padding:0.3rem;border:1px solid #ddd;text-align:center;">공사정산 소계</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(constructionTotals.amount)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(constructionTotals.cost)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${constructionTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(constructionTotals.profit)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(constructionTotals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${constructionTotals.profitRate}%</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;">${fmt(constructionTotals.settlement)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -8349,26 +8523,45 @@ function renderIntegratedConfirmationPreview() {
   if (consultingFiltered.length > 0) {
     html += `
       <div>
-        <h4 style="margin:0 0 0.5rem 0;color:#00897b;display:flex;align-items:center;gap:0.5rem;">
-          <span style="background:#00897b;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;">📋 기술컨설팅</span>
-          ${consultingFiltered.length}건 / ${fmt(consultingTotal)}
+        <h4 style="margin:0 0 0.5rem 0;color:#00897b;display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;">
+          <span style="background:#00897b;color:white;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;">📋 기술컨설팅</span>
+          ${consultingFiltered.length}건
         </h4>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
           <thead>
             <tr style="background:#e0f2f1;">
-              <th style="padding:0.4rem;border:1px solid #ddd;width:50px;">년도</th>
-              <th style="padding:0.4rem;border:1px solid #ddd;text-align:left;">현장명</th>
-              <th style="padding:0.4rem;border:1px solid #ddd;text-align:right;width:100px;">정산금액</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;">년도</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:left;">현장명</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">낙찰금액</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">지출합계</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:center;">이익률</th>
+              <th style="padding:0.3rem;border:1px solid #ddd;text-align:right;">실정산</th>
             </tr>
           </thead>
           <tbody>
-            ${consultingFiltered.map(item => `
+            ${consultingFiltered.map(item => {
+              const expense = (item.execAmount || 0) + (item.companyExp || 0) + (item.otherExp || 0);
+              const profitRate = item.profitRate || (item.bidAmount > 0 ? ((item.profit / item.bidAmount) * 100).toFixed(1) : '0.0');
+              return `
               <tr>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;font-size:0.65rem;" title="${item.site}">${(item.site || '').substring(0, 12)}${(item.site || '').length > 12 ? '...' : ''}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.bidAmount)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(expense)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#00897b;">${fmt(item.settlement)}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
+            <tr style="background:#b2dfdb;font-weight:700;">
+              <td colspan="2" style="padding:0.3rem;border:1px solid #ddd;text-align:center;">컨설팅 소계</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(consultingTotals.bidAmount)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(consultingTotals.totalExpense)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${consultingTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(consultingTotals.profit)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(consultingTotals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${consultingTotals.profitRate}%</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;">${fmt(consultingTotals.settlement)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -8379,11 +8572,16 @@ function renderIntegratedConfirmationPreview() {
       </div>
       
       <!-- 총액 -->
-      <div style="background:#f3e5f5;padding:1rem;text-align:center;border-top:1px solid #ddd;">
-        <div style="display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;">
-          <span style="color:#1976d2;">🏗️ 공사: <strong>${fmt(constructionTotal)}</strong></span>
-          <span style="color:#00897b;">📋 컨설팅: <strong>${fmt(consultingTotal)}</strong></span>
-          <span style="color:#9c27b0;font-size:1.1rem;">📌 총액: <strong style="font-size:1.3rem;">${fmt(grandTotal)}</strong></span>
+      <div style="background:#9c27b0;color:white;padding:1rem;border-top:2px solid #7b1fa2;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+          <div style="font-size:0.8rem;">
+            📌 계약: ${fmt(grandAmount)} | 지출: ${fmt(grandCost)} | 이익: ${fmt(grandProfit)}
+          </div>
+          <div style="display:flex;gap:1rem;align-items:center;">
+            <span style="font-size:0.85rem;">🏗️ ${fmt(constructionTotals.settlement)}</span>
+            <span style="font-size:0.85rem;">📋 ${fmt(consultingTotals.settlement)}</span>
+            <span style="font-size:1.1rem;font-weight:700;">총액: ${fmt(grandTotal)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -8400,88 +8598,142 @@ function generateConfirmationHTML(forPDF = false) {
   const managerName = managerFilter || '전체 담당자';
   const statusText = settledFilter || '전체';
   
-  let totalAmount = 0, totalProfit = 0, totalSettlement = 0;
+  // 합계 계산
+  let totalAmount = 0, totalMaterial = 0, totalLabor = 0, totalExpense = 0, totalProfit = 0, totalSettlement = 0;
   data.forEach(item => {
     totalAmount += item.amount || 0;
+    totalMaterial += item.material || 0;
+    totalLabor += item.laborTotal || item.labor || 0;
+    totalExpense += item.expenseTotal || 0;
     totalProfit += item.profit || 0;
     totalSettlement += item.realSettlement || 0;
   });
+  const totalCost = totalMaterial + totalLabor + totalExpense;
+  const avgProfitRate = totalAmount > 0 ? ((totalProfit / totalAmount) * 100).toFixed(1) : '0.0';
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
   
   const data24 = data.filter(item => String(item.year).includes('24'));
   const data25 = data.filter(item => String(item.year).includes('25'));
-  const total24 = data24.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
-  const total25 = data25.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
+  
+  // 년도별 합계
+  const calcYearTotals = (yearData) => {
+    const totals = yearData.reduce((acc, i) => ({
+      amount: acc.amount + (i.amount || 0),
+      material: acc.material + (i.material || 0),
+      labor: acc.labor + (i.laborTotal || i.labor || 0),
+      expense: acc.expense + (i.expenseTotal || 0),
+      profit: acc.profit + (i.profit || 0),
+      settlement: acc.settlement + (i.realSettlement || 0)
+    }), { amount: 0, material: 0, labor: 0, expense: 0, profit: 0, settlement: 0 });
+    totals.cost = totals.material + totals.labor + totals.expense;
+    totals.profitRate = totals.amount > 0 ? ((totals.profit / totals.amount) * 100).toFixed(1) : '0.0';
+    return totals;
+  };
+  
+  const totals24 = calcYearTotals(data24);
+  const totals25 = calcYearTotals(data25);
+  
+  // 테이블 행 생성 함수
+  const createRow = (item) => {
+    const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
+    const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+    return `
+      <tr>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;">${item.no}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;">${item.site || ''}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.amount)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.material)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.laborTotal || item.labor)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.expenseTotal)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(cost)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:600;">${fmt(item.profit)}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#1565c0;font-weight:700;">${fmt(item.realSettlement)}</td>
+      </tr>
+    `;
+  };
+  
+  // 소계 행 생성 함수
+  const createSubtotalRow = (label, totals) => `
+    <tr style="background:#f5f5f5;font-weight:700;">
+      <td colspan="2" style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;">${label}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.amount)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.material)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.labor)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(totals.expense)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#e65100;">${fmt(totals.cost)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totals.profit)}</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;font-size:0.75rem;color:${parseFloat(totals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${totals.profitRate}%</td>
+      <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;color:#1565c0;">${fmt(totals.settlement)}</td>
+    </tr>
+  `;
   
   let html = `
-    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:20px;max-width:800px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #333;padding-bottom:1rem;">
-        <h2 style="margin:0 0 0.5rem 0;font-size:1.5rem;">📋 정산 확인서</h2>
-        <p style="margin:0;color:#666;font-size:0.9rem;">담당자: <strong style="color:#1565c0;font-size:1.1rem;">${managerName}</strong></p>
-        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.8rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
+    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:15px;max-width:1000px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:1.5rem;border-bottom:2px solid #333;padding-bottom:1rem;">
+        <h2 style="margin:0 0 0.5rem 0;font-size:1.3rem;">🏗️ 공사정산 확인서</h2>
+        <p style="margin:0;color:#666;font-size:0.85rem;">담당자: <strong style="color:#1565c0;font-size:1rem;">${managerName}</strong></p>
+        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.75rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
       </div>
       
       <!-- 요약 -->
-      <div style="background:#f5f5f5;padding:1rem;border-radius:8px;margin-bottom:1.5rem;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+      <div style="background:#f5f5f5;padding:0.75rem;border-radius:8px;margin-bottom:1rem;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.2rem;font-weight:700;">${data.length}건</div>
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${data.length}건</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 공사금액</div>
-            <div style="font-size:1.2rem;font-weight:700;">${fmt(totalAmount)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 공사금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmt(totalAmount)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 지출</div>
+            <div style="font-size:1rem;font-weight:700;color:#e65100;">${fmt(totalCost)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">정산금액 (15%)</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#1565c0;">${fmt(totalSettlement)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 이익 (${avgProfitRate}%)</div>
+            <div style="font-size:1rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:#666;">실정산금액</div>
+            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmt(totalSettlement)}</div>
           </div>
         </div>
       </div>
   `;
   
+  // 테이블 헤더
+  const tableHeader = `
+    <tr style="background:#1976d2;color:white;">
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:center;font-size:0.7rem;">NO</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:left;font-size:0.7rem;">현장명</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">공사금액</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">자재비</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">노무비</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">경비</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">지출합계</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">이익금</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:center;font-size:0.7rem;">이익률</th>
+      <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;font-size:0.7rem;">실정산</th>
+    </tr>
+  `;
+  
   // 24년 데이터
   if (data24.length > 0) {
     html += `
-      <div style="margin-bottom:1.5rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.75rem;color:#e65100;padding:0.5rem;background:#fff3e0;border-radius:4px;">
-          📅 2024년 (${data24.length}건) - 정산금액: <strong>${fmt(total24)}</strong>
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#e65100;padding:0.4rem;background:#fff3e0;border-radius:4px;">
+          📅 2024년 (${data24.length}건)
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-          <thead>
-            <tr style="background:#ff9800;color:white;">
-              <th style="padding:0.5rem;border:1px solid #e65100;text-align:center;">NO</th>
-              <th style="padding:0.5rem;border:1px solid #e65100;text-align:left;">공사현장</th>
-              <th style="padding:0.5rem;border:1px solid #e65100;text-align:right;">공사금액</th>
-              <th style="padding:0.5rem;border:1px solid #e65100;text-align:right;">이익금</th>
-              <th style="padding:0.5rem;border:1px solid #e65100;text-align:right;">정산금액</th>
-            </tr>
-          </thead>
+        <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+          <thead>${tableHeader.replace(/#1976d2/g, '#ff9800').replace(/#1565c0/g, '#e65100')}</thead>
           <tbody>
-            ${data24.map(item => `
-              <tr>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${item.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#1565c0;">${fmt(item.realSettlement)}</td>
-              </tr>
-            `).join('')}
+            ${data24.map(item => createRow(item)).join('')}
+            ${createSubtotalRow('2024년 소계', totals24)}
           </tbody>
-          <tfoot>
-            <tr style="background:#ffecb3;font-weight:700;">
-              <td colspan="2" style="padding:0.5rem;border:1px solid #ddd;">2024년 소계</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(data24.reduce((s,i) => s + (i.amount||0), 0))}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(data24.reduce((s,i) => s + (i.profit||0), 0))}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(total24)}</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     `;
@@ -8490,39 +8742,16 @@ function generateConfirmationHTML(forPDF = false) {
   // 25년 데이터
   if (data25.length > 0) {
     html += `
-      <div style="margin-bottom:1.5rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.75rem;color:#1565c0;padding:0.5rem;background:#e3f2fd;border-radius:4px;">
-          📅 2025년 (${data25.length}건) - 정산금액: <strong>${fmt(total25)}</strong>
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#1565c0;padding:0.4rem;background:#e3f2fd;border-radius:4px;">
+          📅 2025년 (${data25.length}건)
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-          <thead>
-            <tr style="background:#1976d2;color:white;">
-              <th style="padding:0.5rem;border:1px solid #1565c0;text-align:center;">NO</th>
-              <th style="padding:0.5rem;border:1px solid #1565c0;text-align:left;">공사현장</th>
-              <th style="padding:0.5rem;border:1px solid #1565c0;text-align:right;">공사금액</th>
-              <th style="padding:0.5rem;border:1px solid #1565c0;text-align:right;">이익금</th>
-              <th style="padding:0.5rem;border:1px solid #1565c0;text-align:right;">정산금액</th>
-            </tr>
-          </thead>
+        <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+          <thead>${tableHeader}</thead>
           <tbody>
-            ${data25.map(item => `
-              <tr>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${item.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
-                <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#1565c0;">${fmt(item.realSettlement)}</td>
-              </tr>
-            `).join('')}
+            ${data25.map(item => createRow(item)).join('')}
+            ${createSubtotalRow('2025년 소계', totals25)}
           </tbody>
-          <tfoot>
-            <tr style="background:#bbdefb;font-weight:700;">
-              <td colspan="2" style="padding:0.5rem;border:1px solid #ddd;">2025년 소계</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(data25.reduce((s,i) => s + (i.amount||0), 0))}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(data25.reduce((s,i) => s + (i.profit||0), 0))}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;">${fmt(total25)}</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     `;
@@ -8530,25 +8759,27 @@ function generateConfirmationHTML(forPDF = false) {
   
   // 총액 및 회신 요청
   html += `
-      <div style="background:#ffebee;padding:1rem;border-radius:8px;margin-bottom:1.5rem;text-align:center;border:1px solid #ef9a9a;">
-        <span style="font-size:1rem;color:#c62828;">📌 정산 총액: </span>
-        <span style="font-size:1.5rem;font-weight:700;color:#c62828;">${fmt(totalSettlement)}</span>
-        ${data24.length > 0 && data25.length > 0 ? `
-        <span style="font-size:0.85rem;color:#666;margin-left:0.5rem;">(24년 ${fmt(total24)} + 25년 ${fmt(total25)})</span>
-        ` : ''}
+      <div style="background:#1976d2;color:white;padding:1rem;border-radius:8px;margin-bottom:1rem;text-align:center;">
+        <div style="font-size:0.85rem;margin-bottom:0.25rem;">
+          📌 총 ${data.length}건 | 공사금액: ${fmt(totalAmount)} | 지출: ${fmt(totalCost)} | 이익: ${fmt(totalProfit)} (${avgProfitRate}%)
+        </div>
+        <div>
+          <span style="font-size:1rem;">실정산 총액: </span>
+          <span style="font-size:1.5rem;font-weight:700;">${fmt(totalSettlement)}</span>
+        </div>
       </div>
       
       <!-- 회신 요청 -->
       <div style="background:#e8f5e9;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #a5d6a7;">
-        <p style="margin:0;text-align:center;font-size:0.95rem;color:#2e7d32;">
+        <p style="margin:0;text-align:center;font-size:0.9rem;color:#2e7d32;">
           <strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong>
         </p>
-        <p style="margin:0.5rem 0 0 0;text-align:center;font-size:0.85rem;color:#666;">
+        <p style="margin:0.5rem 0 0 0;text-align:center;font-size:0.8rem;color:#666;">
           이상이 있는 경우 해당 현장명과 내용을 함께 회신해주세요.
         </p>
       </div>
       
-      <div style="text-align:center;padding-top:1rem;margin-top:1rem;border-top:1px solid #eee;color:#999;font-size:0.75rem;">
+      <div style="text-align:center;padding-top:1rem;margin-top:1rem;border-top:1px solid #eee;color:#999;font-size:0.7rem;">
         ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
@@ -8750,40 +8981,68 @@ function generateIntegratedConfirmationHTML() {
   const managerName = managerFilter || '전체 담당자';
   const statusText = settledFilter || '전체';
   
-  let constructionTotal = constructionData.reduce((sum, i) => sum + (i.realSettlement || 0), 0);
-  let consultingTotal = consultingFiltered.reduce((sum, i) => sum + (i.settlement || 0), 0);
-  const grandTotal = constructionTotal + consultingTotal;
+  // 공사정산 합계
+  const constructionTotals = constructionData.reduce((acc, item) => ({
+    amount: acc.amount + (item.amount || 0),
+    material: acc.material + (item.material || 0),
+    labor: acc.labor + (item.laborTotal || item.labor || 0),
+    expense: acc.expense + (item.expenseTotal || 0),
+    profit: acc.profit + (item.profit || 0),
+    settlement: acc.settlement + (item.realSettlement || 0)
+  }), { amount: 0, material: 0, labor: 0, expense: 0, profit: 0, settlement: 0 });
+  constructionTotals.cost = constructionTotals.material + constructionTotals.labor + constructionTotals.expense;
+  constructionTotals.profitRate = constructionTotals.amount > 0 ? ((constructionTotals.profit / constructionTotals.amount) * 100).toFixed(1) : '0.0';
+  
+  // 기술컨설팅 합계
+  const consultingTotals = consultingFiltered.reduce((acc, item) => ({
+    bidAmount: acc.bidAmount + (item.bidAmount || 0),
+    execAmount: acc.execAmount + (item.execAmount || 0),
+    companyExp: acc.companyExp + (item.companyExp || 0),
+    otherExp: acc.otherExp + (item.otherExp || 0),
+    profit: acc.profit + (item.profit || 0),
+    settlement: acc.settlement + (item.settlement || 0)
+  }), { bidAmount: 0, execAmount: 0, companyExp: 0, otherExp: 0, profit: 0, settlement: 0 });
+  consultingTotals.totalExpense = consultingTotals.execAmount + consultingTotals.companyExp + consultingTotals.otherExp;
+  consultingTotals.profitRate = consultingTotals.bidAmount > 0 ? ((consultingTotals.profit / consultingTotals.bidAmount) * 100).toFixed(1) : '0.0';
+  
+  const grandTotal = constructionTotals.settlement + consultingTotals.settlement;
+  const grandProfit = constructionTotals.profit + consultingTotals.profit;
+  const grandAmount = constructionTotals.amount + consultingTotals.bidAmount;
+  const grandCost = constructionTotals.cost + consultingTotals.totalExpense;
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
   
   let html = `
-    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:20px;max-width:800px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #9c27b0;padding-bottom:1rem;">
-        <h2 style="margin:0 0 0.5rem 0;font-size:1.5rem;color:#9c27b0;">📊 통합 정산 확인서</h2>
-        <p style="margin:0;color:#666;font-size:0.9rem;">담당자: <strong style="color:#9c27b0;font-size:1.1rem;">${managerName}</strong></p>
-        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.8rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
+    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:15px;max-width:1000px;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:1.5rem;border-bottom:2px solid #9c27b0;padding-bottom:1rem;">
+        <h2 style="margin:0 0 0.5rem 0;font-size:1.3rem;color:#9c27b0;">📊 통합 정산 확인서</h2>
+        <p style="margin:0;color:#666;font-size:0.85rem;">담당자: <strong style="color:#9c27b0;font-size:1rem;">${managerName}</strong></p>
+        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.75rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
       </div>
       
-      <div style="background:#f3e5f5;padding:1rem;border-radius:8px;margin-bottom:1.5rem;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
+      <div style="background:#f3e5f5;padding:0.75rem;border-radius:8px;margin-bottom:1rem;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;text-align:center;">
           <div>
-            <div style="font-size:0.75rem;color:#666;">🏗️ 공사정산</div>
-            <div style="font-size:1rem;font-weight:700;">${constructionData.length}건</div>
-            <div style="font-size:0.9rem;color:#1976d2;">${fmt(constructionTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+            <div style="font-size:0.6rem;color:#888;">공사${constructionData.length} + 컨설팅${consultingFiltered.length}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">📋 기술컨설팅</div>
-            <div style="font-size:1rem;font-weight:700;">${consultingFiltered.length}건</div>
-            <div style="font-size:0.9rem;color:#00897b;">${fmt(consultingTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 계약금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmt(grandAmount)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.2rem;font-weight:700;">${constructionData.length + consultingFiltered.length}건</div>
+            <div style="font-size:0.7rem;color:#666;">총 지출</div>
+            <div style="font-size:1rem;font-weight:700;color:#e65100;">${fmt(grandCost)}</div>
           </div>
           <div>
-            <div style="font-size:0.75rem;color:#666;">정산 총액</div>
-            <div style="font-size:1.3rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
+            <div style="font-size:0.7rem;color:#666;">총 이익금</div>
+            <div style="font-size:1rem;font-weight:700;color:${grandProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(grandProfit)}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:#666;">정산 총액</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#9c27b0;">${fmt(grandTotal)}</div>
           </div>
         </div>
       </div>
@@ -8792,26 +9051,45 @@ function generateIntegratedConfirmationHTML() {
   // 공사정산 섹션
   if (constructionData.length > 0) {
     html += `
-      <div style="margin-bottom:1.5rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:#1976d2;background:#e3f2fd;padding:0.5rem;border-radius:4px;">
-          🏗️ 공사정산 (${constructionData.length}건) - ${fmt(constructionTotal)}
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#1976d2;background:#e3f2fd;padding:0.4rem;border-radius:4px;">
+          🏗️ 공사정산 (${constructionData.length}건)
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
           <thead>
             <tr style="background:#1976d2;color:white;">
-              <th style="padding:0.4rem;border:1px solid #1565c0;">년도</th>
-              <th style="padding:0.4rem;border:1px solid #1565c0;text-align:left;">현장명</th>
-              <th style="padding:0.4rem;border:1px solid #1565c0;text-align:right;">정산금액</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;">년도</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:left;">현장명</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:right;">공사금액</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:right;">지출합계</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:right;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:center;">이익률</th>
+              <th style="padding:0.3rem;border:1px solid #1565c0;text-align:right;">실정산</th>
             </tr>
           </thead>
           <tbody>
-            ${constructionData.map(item => `
+            ${constructionData.map(item => {
+              const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
+              const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+              return `
               <tr>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.realSettlement)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(cost)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#1565c0;">${fmt(item.realSettlement)}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
+            <tr style="background:#bbdefb;font-weight:700;">
+              <td colspan="2" style="padding:0.3rem;border:1px solid #ddd;text-align:center;">공사정산 소계</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(constructionTotals.amount)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(constructionTotals.cost)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${constructionTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(constructionTotals.profit)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(constructionTotals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${constructionTotals.profitRate}%</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#1565c0;">${fmt(constructionTotals.settlement)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -8821,26 +9099,45 @@ function generateIntegratedConfirmationHTML() {
   // 기술컨설팅 섹션
   if (consultingFiltered.length > 0) {
     html += `
-      <div style="margin-bottom:1.5rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:#00897b;background:#e0f2f1;padding:0.5rem;border-radius:4px;">
-          📋 기술컨설팅 (${consultingFiltered.length}건) - ${fmt(consultingTotal)}
+      <div style="margin-bottom:1rem;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#00897b;background:#e0f2f1;padding:0.4rem;border-radius:4px;">
+          📋 기술컨설팅 (${consultingFiltered.length}건)
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
           <thead>
             <tr style="background:#00897b;color:white;">
-              <th style="padding:0.4rem;border:1px solid #00695c;">년도</th>
-              <th style="padding:0.4rem;border:1px solid #00695c;text-align:left;">현장명</th>
-              <th style="padding:0.4rem;border:1px solid #00695c;text-align:right;">정산금액</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;">년도</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:left;">현장명</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;">낙찰금액</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;">지출합계</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;">이익금</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:center;">이익률</th>
+              <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;">실정산</th>
             </tr>
           </thead>
           <tbody>
-            ${consultingFiltered.map(item => `
+            ${consultingFiltered.map(item => {
+              const expense = (item.execAmount || 0) + (item.companyExp || 0) + (item.otherExp || 0);
+              const profitRate = item.profitRate || (item.bidAmount > 0 ? ((item.profit / item.bidAmount) * 100).toFixed(1) : '0.0');
+              return `
               <tr>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;">${item.site || ''}</td>
-                <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;">${item.site || ''}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.bidAmount)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(expense)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-weight:600;color:#00897b;">${fmt(item.settlement)}</td>
               </tr>
-            `).join('')}
+            `}).join('')}
+            <tr style="background:#b2dfdb;font-weight:700;">
+              <td colspan="2" style="padding:0.3rem;border:1px solid #ddd;text-align:center;">컨설팅 소계</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(consultingTotals.bidAmount)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(consultingTotals.totalExpense)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${consultingTotals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(consultingTotals.profit)}</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;color:${parseFloat(consultingTotals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${consultingTotals.profitRate}%</td>
+              <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00897b;">${fmt(consultingTotals.settlement)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -8848,23 +9145,28 @@ function generateIntegratedConfirmationHTML() {
   }
   
   html += `
-      <div style="background:#ffebee;padding:1rem;border-radius:8px;margin-bottom:1rem;text-align:center;border:1px solid #ef9a9a;">
-        <div style="color:#666;margin-bottom:0.5rem;">
-          <span style="margin-right:1.5rem;">🏗️ 공사: <strong style="color:#1976d2;">${fmt(constructionTotal)}</strong></span>
-          <span>📋 컨설팅: <strong style="color:#00897b;">${fmt(consultingTotal)}</strong></span>
+      <div style="background:#9c27b0;color:white;padding:1rem;border-radius:8px;margin-bottom:1rem;text-align:center;">
+        <div style="font-size:0.8rem;margin-bottom:0.25rem;">
+          📌 계약: ${fmt(grandAmount)} | 지출: ${fmt(grandCost)} | 이익: ${fmt(grandProfit)}
         </div>
-        <span style="font-size:1rem;color:#c62828;">📌 정산 총액: </span>
-        <strong style="font-size:1.5rem;color:#c62828;">${fmt(grandTotal)}</strong>
+        <div style="margin-bottom:0.5rem;">
+          <span style="margin-right:1rem;">🏗️ 공사: <strong>${fmt(constructionTotals.settlement)}</strong></span>
+          <span>📋 컨설팅: <strong>${fmt(consultingTotals.settlement)}</strong></span>
+        </div>
+        <div>
+          <span style="font-size:1rem;">정산 총액: </span>
+          <strong style="font-size:1.5rem;">${fmt(grandTotal)}</strong>
+        </div>
       </div>
       
       <div style="background:#e8f5e9;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #a5d6a7;">
-        <p style="margin:0;text-align:center;font-size:0.95rem;color:#2e7d32;">
+        <p style="margin:0;text-align:center;font-size:0.9rem;color:#2e7d32;">
           <strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong>
         </p>
       </div>
       
-      <div style="text-align:center;padding-top:1rem;color:#999;font-size:0.75rem;">
-        ㈜석민이엔씨 정산 관리 시스템
+      <div style="text-align:center;padding-top:1rem;color:#999;font-size:0.7rem;">
+        ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
   `;
