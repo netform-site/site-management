@@ -3613,40 +3613,58 @@ function printSettlement() {
       <title>정산서 - ${siteName}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 30px; font-size: 11px; line-height: 1.4; }
-        h1 { text-align: center; font-size: 22px; margin-bottom: 25px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        body { 
+          font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+          padding: 15px; 
+          font-size: 10px; 
+          line-height: 1.3;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        h1 { text-align: center; font-size: 18px; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 8px; }
         
-        .header-section { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .header-section { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
         .header-left, .header-right { }
-        .header-left div, .header-right div { margin-bottom: 5px; }
+        .header-left div, .header-right div { margin-bottom: 3px; }
         .header-right { text-align: right; }
-        .label { color: #666; font-size: 10px; }
+        .label { color: #666; font-size: 9px; }
         .value { font-weight: 600; }
         
-        .section-title { font-size: 13px; font-weight: 700; margin: 20px 0 10px; padding: 8px 12px; background: #e3f2fd; border-left: 4px solid #1976d2; }
+        .section-title { font-size: 11px; font-weight: 700; margin: 12px 0 6px; padding: 5px 8px; background: #e3f2fd; border-left: 3px solid #1976d2; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 9px; }
         th { background: #f5f5f5; font-weight: 600; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
         .subtotal { background: #fff3e0; }
         .total-row { background: #e8f5e9; font-weight: 700; }
-        .grand-total { background: #1976d2; color: white; font-weight: 700; font-size: 12px; }
+        .grand-total { background: #1976d2; color: white; font-weight: 700; font-size: 10px; }
         
-        .summary-box { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; }
-        .summary-item .label { font-size: 10px; color: #666; margin-bottom: 3px; }
-        .summary-item .value { font-size: 16px; font-weight: 700; }
+        .summary-box { margin-top: 12px; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center; }
+        .summary-item .label { font-size: 9px; color: #666; margin-bottom: 2px; }
+        .summary-item .value { font-size: 13px; font-weight: 700; }
         .profit-positive { color: #2e7d32; }
         .profit-negative { color: #c62828; }
         
-        .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 15px; }
+        .footer { margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
         
         @media print { 
-          body { margin: 0; padding: 20px; } 
+          @page { 
+            size: A4 portrait;
+            margin: 8mm;
+          }
+          body { 
+            margin: 0; 
+            padding: 10px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          } 
           .no-print { display: none; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; }
         }
       </style>
     </head>
@@ -3855,43 +3873,59 @@ function printSettlementForField() {
       <title>정산서(현장소장용) - ${siteName}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 30px; font-size: 11px; line-height: 1.4; }
-        h1 { text-align: center; font-size: 22px; margin-bottom: 8px; }
-        .subtitle { text-align: center; font-size: 12px; color: #f0ad4e; margin-bottom: 20px; font-weight: 600; }
+        body { 
+          font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+          padding: 15px; 
+          font-size: 10px; 
+          line-height: 1.3;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        h1 { text-align: center; font-size: 18px; margin-bottom: 6px; }
+        .subtitle { text-align: center; font-size: 11px; color: #f0ad4e; margin-bottom: 12px; font-weight: 600; }
         
-        .header-section { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #fff8e1; border-radius: 5px; border: 1px solid #f0ad4e; }
+        .header-section { display: flex; justify-content: space-between; margin-bottom: 12px; padding: 10px; background: #fff8e1; border-radius: 4px; border: 1px solid #f0ad4e; }
         .header-left, .header-right { }
-        .header-left div, .header-right div { margin-bottom: 5px; }
+        .header-left div, .header-right div { margin-bottom: 3px; }
         .header-right { text-align: right; }
-        .label { color: #666; font-size: 10px; }
+        .label { color: #666; font-size: 9px; }
         .value { font-weight: 600; }
         
-        .section-title { font-size: 13px; font-weight: 700; margin: 20px 0 10px; padding: 8px 12px; background: #fff3e0; border-left: 4px solid #f0ad4e; }
+        .section-title { font-size: 11px; font-weight: 700; margin: 12px 0 6px; padding: 5px 8px; background: #fff3e0; border-left: 3px solid #f0ad4e; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 9px; }
         th { background: #f5f5f5; font-weight: 600; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
         .total-row { background: #fff3e0; font-weight: 700; }
-        .grand-total { background: #f0ad4e; color: white; font-weight: 700; font-size: 12px; }
+        .grand-total { background: #f0ad4e; color: white; font-weight: 700; font-size: 10px; }
         
-        .summary-box { margin-top: 20px; padding: 20px; background: #fff8e1; border-radius: 5px; border: 2px solid #f0ad4e; }
-        .summary-title { font-size: 14px; font-weight: 700; margin-bottom: 15px; text-align: center; color: #e65100; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; }
-        .summary-item .label { font-size: 10px; color: #666; margin-bottom: 3px; }
-        .summary-item .value { font-size: 18px; font-weight: 700; }
+        .summary-box { margin-top: 12px; padding: 12px; background: #fff8e1; border-radius: 4px; border: 2px solid #f0ad4e; }
+        .summary-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; color: #e65100; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .summary-item .label { font-size: 9px; color: #666; margin-bottom: 2px; }
+        .summary-item .value { font-size: 14px; font-weight: 700; }
         .profit-positive { color: #2e7d32; }
         .profit-negative { color: #c62828; }
         
-        .note-box { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; font-size: 10px; color: #666; }
+        .note-box { margin-top: 12px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 9px; color: #666; }
         .note-box strong { color: #333; }
         
-        .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 15px; }
+        .footer { margin-top: 15px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
         
         @media print { 
-          body { margin: 0; padding: 20px; } 
+          @page { 
+            size: A4 portrait;
+            margin: 8mm;
+          }
+          body { 
+            margin: 0; 
+            padding: 10px;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          } 
           .no-print { display: none; }
         }
       </style>
@@ -3908,7 +3942,7 @@ function printSettlementForField() {
         </div>
         <div class="header-right">
           <div><span class="label">영업담당자:</span> <span class="value">${salesPerson || hqManager || '-'}</span></div>
-          <div><span class="label">현장소장:</span> <span class="value" style="color:#e65100;font-size:14px;">${fieldPerson || siteManager || '-'}</span></div>
+          <div><span class="label">현장소장:</span> <span class="value" style="color:#e65100;font-size:12px;">${fieldPerson || siteManager || '-'}</span></div>
           <div><span class="label">작성일:</span> <span class="value">${new Date().toLocaleDateString('ko-KR')}</span></div>
         </div>
       </div>
@@ -7817,6 +7851,24 @@ function loadConsultingData() {
 function openConfirmationModal() {
   document.getElementById('confirmationModal').classList.add('active');
   
+  // 데이터 로딩 확인 - allData가 비어있으면 로드
+  if (!allData || Object.keys(allData).length === 0) {
+    loadAllData();
+  }
+  
+  // detailData 로딩 확인
+  if (!detailData || Object.keys(detailData).length === 0) {
+    loadDetailData();
+  }
+  
+  // settlementData 생성
+  if (settlementData.length === 0) {
+    settlementData = generateSettlementFromCurrentData();
+  }
+  
+  // 기술컨설팅 데이터 로드
+  loadConsultingData();
+  
   // 기본 탭 설정
   currentConfirmationType = 'construction';
   switchConfirmationTab('construction');
@@ -8821,10 +8873,34 @@ function downloadConfirmationPDF() {
       <title>${title}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+        body { 
+          font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+          font-size: 11px;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        table { 
+          width: 100% !important; 
+          table-layout: fixed;
+          border-collapse: collapse;
+        }
+        th, td { 
+          word-wrap: break-word; 
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         @media print { 
-          body { padding: 0; } 
-          @page { margin: 10mm; }
+          body { 
+            padding: 0; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          @page { 
+            size: A4 landscape;
+            margin: 8mm;
+          }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
         }
       </style>
     </head>
@@ -8833,7 +8909,7 @@ function downloadConfirmationPDF() {
   `);
   printWindow.document.close();
   
-  showToast('PDF 저장: 인쇄 창에서 "PDF로 저장"을 선택하세요.', 'info');
+  showToast('PDF 저장: 인쇄 창에서 "PDF로 저장"을 선택하세요. (가로 방향 권장)', 'info');
   setTimeout(() => printWindow.print(), 300);
 }
 
@@ -8869,80 +8945,152 @@ function generateConsultingConfirmationHTML() {
   const managerName = managerFilter || '전체 담당자';
   const statusText = settledFilter || '전체';
   
-  let totalBidAmount = 0, totalProfit = 0, totalSettlement = 0;
+  // 합계 계산
+  let totalBidAmount = 0, totalExecAmount = 0, totalCompanyExp = 0, totalOtherExp = 0, totalProfit = 0, totalSettlement = 0;
   data.forEach(item => {
     totalBidAmount += item.bidAmount || 0;
+    totalExecAmount += item.execAmount || 0;
+    totalCompanyExp += item.companyExp || 0;
+    totalOtherExp += item.otherExp || 0;
     totalProfit += item.profit || 0;
     totalSettlement += item.settlement || 0;
   });
+  const totalExpense = totalExecAmount + totalCompanyExp + totalOtherExp;
+  const avgProfitRate = totalBidAmount > 0 ? ((totalProfit / totalBidAmount) * 100).toFixed(1) : '0.0';
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
   
+  // 년도별 분리
+  const data24 = data.filter(item => item.year === '2024');
+  const data25 = data.filter(item => item.year === '2025');
+  const data26 = data.filter(item => item.year === '2026');
+  
+  // 년도별 합계 계산 함수
+  const calcYearTotals = (yearData) => {
+    const totals = yearData.reduce((acc, i) => ({
+      bidAmount: acc.bidAmount + (i.bidAmount || 0),
+      execAmount: acc.execAmount + (i.execAmount || 0),
+      companyExp: acc.companyExp + (i.companyExp || 0),
+      otherExp: acc.otherExp + (i.otherExp || 0),
+      profit: acc.profit + (i.profit || 0),
+      settlement: acc.settlement + (i.settlement || 0)
+    }), { bidAmount: 0, execAmount: 0, companyExp: 0, otherExp: 0, profit: 0, settlement: 0 });
+    totals.totalExpense = totals.execAmount + totals.companyExp + totals.otherExp;
+    totals.profitRate = totals.bidAmount > 0 ? ((totals.profit / totals.bidAmount) * 100).toFixed(1) : '0.0';
+    return totals;
+  };
+  
+  // 테이블 행 생성 함수
+  const createRow = (item) => {
+    const itemExpense = (item.execAmount || 0) + (item.companyExp || 0) + (item.otherExp || 0);
+    const profitRate = item.profitRate || (item.bidAmount > 0 ? ((item.profit / item.bidAmount) * 100).toFixed(1) : '0.0');
+    return `
+      <tr>
+        <td style="padding:0.3rem;border:1px solid #ddd;font-size:10px;">${item.site || ''}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;font-size:9px;color:#666;">${(item.project || '-').substring(0, 15)}${(item.project || '').length > 15 ? '...' : ''}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(item.bidAmount)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(item.execAmount)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(item.companyExp)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(item.otherExp)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:#e65100;">${fmt(itemExpense)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};font-weight:600;">${fmt(item.profit)}</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;font-size:10px;color:${parseFloat(profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${profitRate}%</td>
+        <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:#00897b;font-weight:700;">${fmt(item.settlement)}</td>
+      </tr>
+    `;
+  };
+  
+  // 소계 행 생성 함수
+  const createSubtotalRow = (label, totals) => `
+    <tr style="background:#e0f2f1;font-weight:700;">
+      <td colspan="2" style="padding:0.3rem;border:1px solid #ddd;text-align:center;font-size:10px;">${label}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(totals.bidAmount)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(totals.execAmount)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(totals.companyExp)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;">${fmt(totals.otherExp)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:#e65100;">${fmt(totals.totalExpense)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:${totals.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totals.profit)}</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;font-size:10px;color:${parseFloat(totals.profitRate) >= 0 ? '#2e7d32' : '#c62828'};">${totals.profitRate}%</td>
+      <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:10px;color:#00897b;">${fmt(totals.settlement)}</td>
+    </tr>
+  `;
+  
+  // 테이블 헤더
+  const tableHeader = `
+    <tr style="background:#00897b;color:white;">
+      <th style="padding:0.3rem;border:1px solid #00695c;font-size:10px;min-width:80px;">현장명</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;font-size:10px;min-width:60px;">공사명</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">낙찰금액</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">실행금액</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">본사경비</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">기타비용</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">지출합계</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">이익금</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:center;font-size:10px;">이익률</th>
+      <th style="padding:0.3rem;border:1px solid #00695c;text-align:right;font-size:10px;">실정산</th>
+    </tr>
+  `;
+  
   let html = `
-    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:20px;max-width:800px;margin:0 auto;">
-      <div style="text-align:center;margin-bottom:2rem;border-bottom:2px solid #00897b;padding-bottom:1rem;">
-        <h2 style="margin:0 0 0.5rem 0;font-size:1.5rem;color:#00897b;">📋 기술컨설팅 정산 확인서</h2>
-        <p style="margin:0;color:#666;font-size:0.9rem;">담당자: <strong style="color:#00897b;font-size:1.1rem;">${managerName}</strong></p>
-        <p style="margin:0.25rem 0 0 0;color:#888;font-size:0.8rem;">발행일: ${reportDate} / 상태: ${statusText}</p>
+    <div style="font-family:'Noto Sans KR','Malgun Gothic',sans-serif;padding:10px;max-width:100%;margin:0 auto;">
+      <div style="text-align:center;margin-bottom:1rem;border-bottom:2px solid #00897b;padding-bottom:0.5rem;">
+        <h2 style="margin:0 0 0.3rem 0;font-size:16px;color:#00897b;">📋 기술컨설팅 정산 확인서</h2>
+        <p style="margin:0;color:#666;font-size:11px;">담당자: <strong style="color:#00897b;">${managerName}</strong> | 발행일: ${reportDate} | 상태: ${statusText}</p>
       </div>
       
-      <div style="background:#e0f2f1;padding:1rem;border-radius:8px;margin-bottom:1.5rem;">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
-          <div>
-            <div style="font-size:0.75rem;color:#666;">총 건수</div>
-            <div style="font-size:1.2rem;font-weight:700;">${data.length}건</div>
-          </div>
-          <div>
-            <div style="font-size:0.75rem;color:#666;">총 낙찰금액</div>
-            <div style="font-size:1.2rem;font-weight:700;">${fmt(totalBidAmount)}</div>
-          </div>
-          <div>
-            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</div>
-          </div>
-          <div>
-            <div style="font-size:0.75rem;color:#666;">정산금액 (15%)</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#00897b;">${fmt(totalSettlement)}</div>
-          </div>
+      <div style="background:#e0f2f1;padding:0.5rem;border-radius:4px;margin-bottom:0.75rem;">
+        <div style="display:flex;justify-content:space-around;text-align:center;flex-wrap:wrap;gap:0.5rem;">
+          <div><span style="font-size:10px;color:#666;">건수:</span> <strong style="font-size:12px;">${data.length}건</strong></div>
+          <div><span style="font-size:10px;color:#666;">낙찰금액:</span> <strong style="font-size:12px;">${fmt(totalBidAmount)}</strong></div>
+          <div><span style="font-size:10px;color:#666;">지출:</span> <strong style="font-size:12px;color:#e65100;">${fmt(totalExpense)}</strong></div>
+          <div><span style="font-size:10px;color:#666;">이익(${avgProfitRate}%):</span> <strong style="font-size:12px;color:${totalProfit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(totalProfit)}</strong></div>
+          <div><span style="font-size:10px;color:#666;">실정산:</span> <strong style="font-size:14px;color:#00897b;">${fmt(totalSettlement)}</strong></div>
+        </div>
+      </div>
+  `;
+  
+  // 년도별 테이블 생성
+  const renderYearSection = (yearData, year, headerBg) => {
+    if (yearData.length === 0) return '';
+    const totals = calcYearTotals(yearData);
+    return `
+      <div style="margin-bottom:0.75rem;">
+        <h4 style="margin:0 0 0.3rem 0;font-size:11px;color:#00695c;background:${headerBg};padding:0.25rem 0.5rem;border-radius:2px;">
+          📅 ${year}년 (${yearData.length}건)
+        </h4>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>${tableHeader}</thead>
+          <tbody>
+            ${yearData.map(item => createRow(item)).join('')}
+            ${createSubtotalRow(`${year}년 소계`, totals)}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+  
+  html += renderYearSection(data24, '2024', '#fff8e1');
+  html += renderYearSection(data25, '2025', '#e0f2f1');
+  html += renderYearSection(data26, '2026', '#e8f5e9');
+  
+  html += `
+      <div style="background:#00897b;color:white;padding:0.75rem;border-radius:4px;margin:0.75rem 0;text-align:center;">
+        <div style="font-size:11px;margin-bottom:0.25rem;">
+          📌 낙찰: ${fmt(totalBidAmount)} | 지출: ${fmt(totalExpense)} | 이익: ${fmt(totalProfit)} (${avgProfitRate}%)
+        </div>
+        <div>
+          <span style="font-size:12px;">실정산 총액: </span>
+          <strong style="font-size:18px;">${fmt(totalSettlement)}</strong>
         </div>
       </div>
       
-      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:1.5rem;">
-        <thead>
-          <tr style="background:#00897b;color:white;">
-            <th style="padding:0.5rem;border:1px solid #00695c;">년도</th>
-            <th style="padding:0.5rem;border:1px solid #00695c;text-align:left;">현장명</th>
-            <th style="padding:0.5rem;border:1px solid #00695c;text-align:left;">공사명</th>
-            <th style="padding:0.5rem;border:1px solid #00695c;text-align:right;">정산금액</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(item => `
-            <tr>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;">${item.site || ''}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;font-size:0.8rem;color:#666;">${item.project || '-'}</td>
-              <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.settlement)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-        <tfoot>
-          <tr style="background:#b2dfdb;font-weight:700;">
-            <td colspan="3" style="padding:0.5rem;border:1px solid #ddd;">합계</td>
-            <td style="padding:0.5rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#00695c;">${fmt(totalSettlement)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      
-      <div style="background:#e8f5e9;padding:1rem;border-radius:8px;margin-bottom:1rem;border:1px solid #a5d6a7;">
-        <p style="margin:0;text-align:center;font-size:0.95rem;color:#2e7d32;">
-          <strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong>
-        </p>
+      <div style="background:#e8f5e9;padding:0.5rem;border-radius:4px;text-align:center;border:1px solid #a5d6a7;">
+        <p style="margin:0;font-size:11px;color:#2e7d32;"><strong>📧 확인 완료 시 본 메일에 회신 부탁드립니다.</strong></p>
       </div>
       
-      <div style="text-align:center;padding-top:1rem;color:#999;font-size:0.75rem;">
-        ㈜석민이엔씨 정산 관리 시스템
+      <div style="text-align:center;padding-top:0.5rem;color:#999;font-size:9px;">
+        ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
   `;
