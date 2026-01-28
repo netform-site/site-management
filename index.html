@@ -824,6 +824,7 @@ tr.selected { background: var(--primary-light); }
           <option value="미정산">미정산</option>
           <option value="진행중">진행중</option>
         </select>
+        <button onclick="refreshSettlementData()" style="padding:0.5rem 0.75rem;border:1px solid #4caf50;background:#e8f5e9;color:#2e7d32;border-radius:6px;cursor:pointer;font-size:0.8rem;" title="총괄표 데이터로 정산관리 갱신">🔄 새로고침</button>
         <div style="margin-left:auto;font-size:0.85rem;color:var(--gray-500);">
           <span id="settlementFilterResult"></span>
         </div>
@@ -3446,6 +3447,12 @@ function saveDetailData() {
   saveToStorage();
   
   saveDetailDataToStorage();
+  
+  // 정산관리 데이터 갱신 (정산리스트 엑셀을 업로드하지 않은 경우)
+  if (!window.settlementExcelUploaded) {
+    settlementData = generateSettlementFromCurrentData();
+  }
+  
   showToast('상세 정보가 저장되었습니다.', 'success');
   
   // 테이블 새로고침
@@ -6950,12 +6957,47 @@ function changePassword() {
 // ========== 정산 관리 ==========
 function openSettlementModal() {
   document.getElementById('settlementModal').classList.add('active');
+  
+  // 데이터 로딩 확인
+  if (!allData || Object.keys(allData).length === 0) {
+    loadAllData();
+  }
+  if (!detailData || Object.keys(detailData).length === 0) {
+    loadDetailData();
+  }
+  
+  // 정산 데이터 갱신 (총괄표 데이터 반영)
+  // 정산리스트 엑셀을 업로드하지 않은 경우 항상 최신 데이터 사용
+  if (settlementData.length === 0 || !window.settlementExcelUploaded) {
+    settlementData = generateSettlementFromCurrentData();
+  }
+  
   loadSettlementStatusFromStorage();  // 저장된 정산 상태 불러오기
   renderSettlementTable();
 }
 
 function closeSettlementModal() {
   document.getElementById('settlementModal').classList.remove('active');
+}
+
+// 정산 데이터 새로고침 (총괄표 데이터로 갱신)
+function refreshSettlementData() {
+  // 데이터 로딩 확인
+  if (!allData || Object.keys(allData).length === 0) {
+    loadAllData();
+  }
+  if (!detailData || Object.keys(detailData).length === 0) {
+    loadDetailData();
+  }
+  
+  // 정산 데이터 강제 갱신
+  window.settlementExcelUploaded = false;  // 플래그 해제
+  settlementData = generateSettlementFromCurrentData();
+  
+  loadSettlementStatusFromStorage();  // 저장된 정산 상태 불러오기
+  renderSettlementTable();
+  
+  showToast(`정산 데이터가 갱신되었습니다. (${settlementData.length}건)`, 'success');
 }
 
 // 정산리스트 엑셀 업로드
@@ -7015,6 +7057,7 @@ function handleSettlementUpload(event) {
         settlementData.push(item);
       }
       
+      window.settlementExcelUploaded = true;  // 정산리스트 엑셀 업로드 플래그
       showToast(`정산리스트 ${settlementData.length}건 로드 완료`, 'success');
       renderSettlementTable();
       openSettlementModal();
