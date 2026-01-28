@@ -2279,10 +2279,16 @@ function renderTable() {
     const cs = getPaymentStatus(item.contract1, isCancelled);
     const is = getPaymentStatus(item.interim1, isCancelled);
     const bs = getPaymentStatus(item.balance1, isCancelled);
+    
+    // 총괄표 미등록 체크
+    const detailKey = `${currentYear}_${item.no}`;
+    const hasDetail = detailData && detailData[detailKey];
+    const noDetailMark = !hasDetail && !isCancelled ? '<span title="총괄표 미등록" style="color:#e53935;margin-left:2px;">🔴</span>' : '';
+    
     return `<tr class="${isSelected ? 'selected' : ''}">
       <td><input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelect(${originalIdx})"></td>
       <td>${item.no || '-'}</td><td>${item.region || '-'}</td>
-      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.site}">${highlightKeyword(item.site) || '-'}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.site}${!hasDetail && !isCancelled ? ' (총괄표 미등록)' : ''}">${highlightKeyword(item.site) || '-'}${noDetailMark}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.name}">${highlightKeyword(item.name) || '-'}</td>
       <td class="text-right font-mono">${fmt(item.amount)}</td>
       <td class="text-right font-mono">${fmt(item.amountTax)}</td>
@@ -7209,15 +7215,15 @@ function renderSettlementTable() {
     
     // 총괄표 데이터 유무 표시
     const dataIcon = item.hasDetailData 
-      ? '<span title="총괄표 데이터 있음" style="color:#66bb6a;">✓</span>' 
-      : '<span title="총괄표 데이터 없음 (추정치)" style="color:#bdbdbd;">~</span>';
+      ? '' 
+      : '<span title="총괄표 미등록 (추정치)" style="color:#e53935;margin-left:2px;">🔴</span>';
     
     html += `<tr class="${statusClass}">
       <td>${item.year || '-'}</td>
-      <td>${item.no || (idx + 1)} ${dataIcon}</td>
+      <td>${item.no || (idx + 1)}</td>
       <td>${hqTypeBadge}</td>
       <td>${item.type || '-'}</td>
-      <td title="${item.site}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.site || '-'}</td>
+      <td title="${item.site}${!item.hasDetailData ? ' (총괄표 미등록)' : ''}" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.site || '-'}${dataIcon}</td>
       <td>${fmt(item.amount)}</td>
       <td>${item.status || '-'}</td>
       <td style="font-size:0.7rem;">${item.paidDate || '-'}</td>
@@ -8107,10 +8113,11 @@ function renderConstructionConfirmationPreview() {
   const createTableRow = (item) => {
     const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
     const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+    const noDetailMark = !item.hasDetailData ? '<span title="총괄표 미등록" style="color:#e53935;margin-left:2px;">🔴</span>' : '';
     return `
       <tr>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}">${(item.site || '').substring(0, 15)}${(item.site || '').length > 15 ? '...' : ''}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}${!item.hasDetailData ? ' (총괄표 미등록)' : ''}">${(item.site || '').substring(0, 15)}${(item.site || '').length > 15 ? '...' : ''}${noDetailMark}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.amount)}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.material)}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.laborTotal || item.labor)}</td>
@@ -8589,10 +8596,11 @@ function renderIntegratedConfirmationPreview() {
             ${constructionData.map(item => {
               const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
               const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
+              const noDetailMark = !item.hasDetailData ? '<span title="총괄표 미등록" style="color:#e53935;margin-left:2px;">🔴</span>' : '';
               return `
               <tr>
                 <td style="padding:0.3rem;border:1px solid #ddd;text-align:center;">${item.year}</td>
-                <td style="padding:0.3rem;border:1px solid #ddd;font-size:0.65rem;" title="${item.site}">${(item.site || '').substring(0, 12)}${(item.site || '').length > 12 ? '...' : ''}</td>
+                <td style="padding:0.3rem;border:1px solid #ddd;font-size:0.65rem;" title="${item.site}${!item.hasDetailData ? ' (총괄표 미등록)' : ''}">${(item.site || '').substring(0, 12)}${(item.site || '').length > 12 ? '...' : ''}${noDetailMark}</td>
                 <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;">${fmt(item.amount)}</td>
                 <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:#e65100;">${fmt(cost)}</td>
                 <td style="padding:0.3rem;border:1px solid #ddd;text-align:right;font-family:monospace;color:${(item.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(item.profit)}</td>
