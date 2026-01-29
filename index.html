@@ -9663,6 +9663,7 @@ function saveConsultingData() {
     const idx = consultingData.findIndex(d => d.id === editId);
     if (idx !== -1) {
       item.settled = consultingData[idx].settled; // 기존 정산상태 유지
+      item.listId = consultingData[idx].listId; // listId 유지
       consultingData[idx] = item;
     }
   } else {
@@ -9671,9 +9672,68 @@ function saveConsultingData() {
   }
   
   localStorage.setItem('consultingData', JSON.stringify(consultingData));
+  
+  // consultingListData와 동기화
+  syncSettlementToConsultingList(item);
+  
   showToast('저장되었습니다.', 'success');
   closeConsultingAddModal();
   renderConsultingTable();
+}
+
+// 정산관리 → 컨설팅리스트 동기화
+function syncSettlementToConsultingList(item) {
+  loadConsultingListData();
+  
+  // listId로 찾거나, 현장명+년도로 찾기
+  let existIdx = -1;
+  if (item.listId) {
+    existIdx = consultingListData.findIndex(d => d.id === item.listId);
+  }
+  if (existIdx === -1) {
+    existIdx = consultingListData.findIndex(d => d.site === item.site && d.year === item.year);
+  }
+  
+  if (existIdx !== -1) {
+    // 기존 데이터 업데이트 (정산관리 필드만)
+    consultingListData[existIdx].bidAmount = item.bidAmount;
+    consultingListData[existIdx].execAmount = item.execAmount;
+    consultingListData[existIdx].manager = item.manager;
+    consultingListData[existIdx].type = item.type;
+    consultingListData[existIdx].project = item.project || consultingListData[existIdx].project;
+    localStorage.setItem('consultingListData', JSON.stringify(consultingListData));
+  } else {
+    // 새로 추가
+    const newListItem = {
+      id: Date.now().toString() + '_list',
+      year: item.year,
+      type: item.type,
+      consulting: 'Y',
+      site: item.site,
+      project: item.project,
+      bidAmount: item.bidAmount,
+      execAmount: item.execAmount,
+      manager: item.manager,
+      company: '',
+      companyManager: '',
+      warranty: '',
+      fieldManager: '',
+      photo: 'X',
+      contractDate: '',
+      startDate: '',
+      endDate: '',
+      note: ''
+    };
+    consultingListData.push(newListItem);
+    localStorage.setItem('consultingListData', JSON.stringify(consultingListData));
+    
+    // consultingData에 listId 연결
+    const cIdx = consultingData.findIndex(d => d.id === item.id);
+    if (cIdx !== -1) {
+      consultingData[cIdx].listId = newListItem.id;
+      localStorage.setItem('consultingData', JSON.stringify(consultingData));
+    }
+  }
 }
 
 // 정산관리 메인 탭 전환
