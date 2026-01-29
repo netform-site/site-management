@@ -1696,6 +1696,14 @@ tr.selected { background: var(--primary-light); }
             <input type="text" class="form-input" id="sales_field_manager" readonly style="background:#f5f5f5;">
           </div>
         </div>
+        <!-- 정산제외 체크 -->
+        <div style="padding:0.75rem 1rem;border-top:1px dashed #ce93d8;background:#fff3e0;">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <input type="checkbox" id="sales_exclude" style="width:18px;height:18px;cursor:pointer;">
+            <span style="font-weight:600;color:#e65100;">🚫 정산제외</span>
+            <span style="font-size:0.75rem;color:#666;">(체크 시 담당자 확인서에서 제외됨)</span>
+          </label>
+        </div>
       </div>
       
       <!-- 공사 내역 -->
@@ -4858,9 +4866,11 @@ function openSalesSettlementModal() {
   if (salesSettlementByManager[key]) {
     salesSettlementData = JSON.parse(JSON.stringify(salesSettlementByManager[key]));
     document.getElementById('salesMemo').value = salesSettlementData.memo || '';
+    document.getElementById('sales_exclude').checked = salesSettlementData.excluded || false;
   } else {
     // 기본 데이터 초기화
     initSalesSettlementData();
+    document.getElementById('sales_exclude').checked = false;
   }
   
   // 테이블 렌더링
@@ -5000,6 +5010,7 @@ function saveSalesSettlementData() {
   if (!item) return;
   
   salesSettlementData.memo = document.getElementById('salesMemo').value || '';
+  salesSettlementData.excluded = document.getElementById('sales_exclude').checked;
   
   const key = `${currentYear}_${item.no}`;
   salesSettlementByManager[key] = JSON.parse(JSON.stringify(salesSettlementData));
@@ -5014,6 +5025,9 @@ function saveSalesSettlementData() {
   if (salesManager) {
     detailData[key].hqManager = salesManager;
   }
+  
+  // 정산제외 여부 업데이트
+  detailData[key].excluded = salesSettlementData.excluded;
   
   // 매출액 업데이트 (공사내역의 매출액)
   let salesTotal = 0;
@@ -7630,6 +7644,9 @@ function generateSettlementFromCurrentData() {
         }
       } catch(e) {}
       
+      // 정산제외 여부 확인
+      const isExcludedByUser = detail && detail.excluded === true;
+      
       allSettlementData.push({
         year: year.substring(2),  // '24' 또는 '25' 또는 '26'
         no: item.no,
@@ -7652,7 +7669,8 @@ function generateSettlementFromCurrentData() {
         manager: manager,
         settled: savedSettled || (detailStatus === 'paid' ? '정산완료' : '미정산'),
         hasDetailData: hasDetailData,  // 총괄표 데이터 유무
-        isExcluded: EXCLUDE_MANAGERS.includes(manager)  // 정산 제외 대상
+        isExcluded: EXCLUDE_MANAGERS.includes(manager) || isExcludedByUser,  // 정산 제외 대상
+        excludedByUser: isExcludedByUser  // 사용자가 직접 제외한 경우
       });
     });
   });
@@ -8026,6 +8044,26 @@ function closeConfirmationModal() {
 function getFilteredConfirmationData() {
   let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
   
+  // 정산제외 현장은 금액을 0으로 처리 (목록에는 표시, 합계에서 제외)
+  data = data.map(item => {
+    if (item.excludedByUser) {
+      return {
+        ...item,
+        amount: 0,
+        material: 0,
+        labor: 0,
+        laborTotal: 0,
+        expenseTotal: 0,
+        totalExpense: 0,
+        profit: 0,
+        profitRate: 0,
+        realSettlement: 0,
+        companyProfit: 0
+      };
+    }
+    return item;
+  });
+  
   // 확인서 모달 내 필터 사용
   const yearFilter = document.getElementById('confirmationYearSelect')?.value || '';
   const managerFilter = document.getElementById('confirmationManagerSelect')?.value || '';
@@ -8156,10 +8194,12 @@ function renderConstructionConfirmationPreview() {
     const cost = (item.material || 0) + (item.laborTotal || item.labor || 0) + (item.expenseTotal || 0);
     const profitRate = item.profitRate ? (item.profitRate * 100).toFixed(1) : (item.amount > 0 ? ((item.profit / item.amount) * 100).toFixed(1) : '0.0');
     const noDetailMark = !item.hasDetailData ? '<span title="총괄표 미등록" style="color:#e53935;margin-left:2px;">🔴</span>' : '';
+    const excludedMark = item.excludedByUser ? '<span title="정산제외" style="color:#ff9800;margin-left:2px;">🚫</span>' : '';
+    const rowStyle = item.excludedByUser ? 'background:#fff3e0;color:#999;' : '';
     return `
-      <tr>
+      <tr style="${rowStyle}">
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:center;">${item.no}</td>
-        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}${!item.hasDetailData ? ' (총괄표 미등록)' : ''}">${(item.site || '').substring(0, 15)}${(item.site || '').length > 15 ? '...' : ''}${noDetailMark}</td>
+        <td style="padding:0.4rem;border:1px solid #ddd;font-size:0.75rem;" title="${item.site || ''}${!item.hasDetailData ? ' (총괄표 미등록)' : ''}${item.excludedByUser ? ' (정산제외)' : ''}">${(item.site || '').substring(0, 15)}${(item.site || '').length > 15 ? '...' : ''}${noDetailMark}${excludedMark}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.amount)}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.material)}</td>
         <td style="padding:0.4rem;border:1px solid #ddd;text-align:right;font-family:monospace;font-size:0.75rem;">${fmt(item.laborTotal || item.labor)}</td>
