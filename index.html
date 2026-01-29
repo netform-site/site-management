@@ -5004,9 +5004,51 @@ function saveSalesSettlementData() {
   const key = `${currentYear}_${item.no}`;
   salesSettlementByManager[key] = JSON.parse(JSON.stringify(salesSettlementData));
   
+  // detailData에도 연동 (담당자 확인서에 반영)
+  if (!detailData[key]) {
+    detailData[key] = {};
+  }
+  
+  // 영업담당자 업데이트
+  const salesManager = document.getElementById('sales_manager').value;
+  if (salesManager) {
+    detailData[key].hqManager = salesManager;
+  }
+  
+  // 매출액 업데이트 (공사내역의 매출액)
+  let salesTotal = 0;
+  salesSettlementData.works.forEach(w => salesTotal += w.sales || 0);
+  detailData[key].settlementSales = salesTotal;
+  
+  // 매입내역을 expenses로 변환하여 저장
+  const expenses = [];
+  salesSettlementData.expenses.forEach(exp => {
+    if (exp.amount > 0 || exp.content) {
+      expenses.push({
+        type: exp.type || '기타경비',
+        date: '',
+        amount: exp.amount || 0,
+        content: exp.content || '',
+        payDate: exp.payDate || ''
+      });
+    }
+  });
+  
+  // 기존 expenses가 있으면 영업담당자용 정산서 데이터로 대체
+  detailData[key].expenses = expenses;
+  
+  // 비고 업데이트
+  detailData[key].salesMemo = salesSettlementData.memo;
+  
+  // detailData 저장
+  saveDetailDataToStorage();
+  
+  // settlementData 갱신 (정산관리/담당자확인서에 반영)
+  settlementData = generateSettlementFromCurrentData();
+  
   try {
     localStorage.setItem('salesSettlementByManager', JSON.stringify(salesSettlementByManager));
-    showToast('영업담당자용 정산 데이터가 저장되었습니다.', 'success');
+    showToast('영업담당자용 정산 데이터가 저장되었습니다. (담당자 확인서 연동)', 'success');
   } catch (e) {
     console.error('영업담당자 정산 데이터 저장 실패:', e);
   }
