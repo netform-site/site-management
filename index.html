@@ -2013,6 +2013,7 @@ function saveManagerEmails() {
 let detailPhotos = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+  loadDetailData();  // 총괄표 데이터 먼저 로드 (🔴 표시용)
   initYearTabs();
   initDragDrop();
   loadFromStorage();
