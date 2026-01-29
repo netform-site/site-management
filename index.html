@@ -9612,6 +9612,8 @@ ${typeText}정산 내역 확인을 요청드립니다.
 
 // 기술컨설팅 데이터 저장
 function saveConsultingData() {
+  console.log('=== saveConsultingData 함수 호출됨 ===');
+  
   const editId = document.getElementById('consultingEditId').value;
   
   const year = document.getElementById('consultingYear').value;
@@ -9623,6 +9625,9 @@ function saveConsultingData() {
   const companyExp = parseFloat(document.getElementById('consultingCompanyExp').value) || 0;
   const otherExp = parseFloat(document.getElementById('consultingOtherExp').value) || 0;
   const manager = document.getElementById('consultingManager').value;
+  
+  console.log('editId:', editId);
+  console.log('site:', site, 'year:', year);
   
   if (!site) {
     showToast('공사현장을 입력해주세요.', 'error');
@@ -9639,61 +9644,68 @@ function saveConsultingData() {
   const settlement = profit > 0 ? Math.round(profit * 0.15) : 0;
   const companyProfit = profit - settlement;
   
-  const item = {
-    id: editId || Date.now().toString(),
-    year,
-    type,
-    site,
-    project,
-    bidAmount,
-    execAmount,
-    companyExp,
-    otherExp,
-    totalExpense,
-    profit,
-    profitRate: profitRate.toFixed(1),
-    settlement,
-    companyProfit,
-    manager,
-    settled: '미정산'
-  };
+  // 최신 데이터 로드
+  loadConsultingData();
   
-  if (editId) {
+  // 먼저 현장명+년도로 찾기 (가장 확실한 방법)
+  let idx = consultingData.findIndex(d => d.site === site && d.year === year);
+  console.log('현장명+년도로 찾은 idx:', idx);
+  
+  // 못 찾으면 editId로 찾기
+  if (idx === -1 && editId) {
+    idx = consultingData.findIndex(d => d.id === editId);
+    console.log('editId로 찾은 idx:', idx);
+  }
+  
+  if (idx !== -1) {
     // 수정
-    const idx = consultingData.findIndex(d => d.id === editId);
-    console.log('=== saveConsultingData 수정 ===');
-    console.log('editId:', editId);
-    console.log('찾은 idx:', idx);
-    console.log('consultingData IDs:', consultingData.map(d => d.id));
-    
-    if (idx !== -1) {
-      item.settled = consultingData[idx].settled; // 기존 정산상태 유지
-      item.listId = consultingData[idx].listId; // listId 유지
-      consultingData[idx] = item;
-    } else {
-      // ID로 못 찾으면 현장명+년도로 찾기
-      const idx2 = consultingData.findIndex(d => d.site === site && d.year === year);
-      console.log('현장명+년도로 찾은 idx2:', idx2);
-      if (idx2 !== -1) {
-        item.id = consultingData[idx2].id; // 기존 ID 유지
-        item.settled = consultingData[idx2].settled;
-        item.listId = consultingData[idx2].listId;
-        consultingData[idx2] = item;
-      } else {
-        // 아예 못 찾으면 신규 추가
-        console.log('못 찾아서 신규 추가');
-        consultingData.push(item);
-      }
-    }
+    const existingItem = consultingData[idx];
+    const item = {
+      id: existingItem.id,  // 기존 ID 유지
+      year,
+      type,
+      site,
+      project,
+      bidAmount,
+      execAmount,
+      companyExp,
+      otherExp,
+      totalExpense,
+      profit,
+      profitRate: profitRate.toFixed(1),
+      settlement,
+      companyProfit,
+      manager,
+      settled: existingItem.settled || '미정산',
+      listId: existingItem.listId
+    };
+    consultingData[idx] = item;
+    console.log('기존 데이터 수정 완료, idx:', idx);
   } else {
     // 신규
+    const item = {
+      id: Date.now().toString(),
+      year,
+      type,
+      site,
+      project,
+      bidAmount,
+      execAmount,
+      companyExp,
+      otherExp,
+      totalExpense,
+      profit,
+      profitRate: profitRate.toFixed(1),
+      settlement,
+      companyProfit,
+      manager,
+      settled: '미정산'
+    };
     consultingData.push(item);
+    console.log('신규 데이터 추가');
   }
   
   localStorage.setItem('consultingData', JSON.stringify(consultingData));
-  
-  // consultingListData와 동기화
-  syncSettlementToConsultingList(item);
   
   showToast('저장되었습니다.', 'success');
   closeConsultingAddModal();
