@@ -9661,10 +9661,29 @@ function saveConsultingData() {
   if (editId) {
     // 수정
     const idx = consultingData.findIndex(d => d.id === editId);
+    console.log('=== saveConsultingData 수정 ===');
+    console.log('editId:', editId);
+    console.log('찾은 idx:', idx);
+    console.log('consultingData IDs:', consultingData.map(d => d.id));
+    
     if (idx !== -1) {
       item.settled = consultingData[idx].settled; // 기존 정산상태 유지
       item.listId = consultingData[idx].listId; // listId 유지
       consultingData[idx] = item;
+    } else {
+      // ID로 못 찾으면 현장명+년도로 찾기
+      const idx2 = consultingData.findIndex(d => d.site === site && d.year === year);
+      console.log('현장명+년도로 찾은 idx2:', idx2);
+      if (idx2 !== -1) {
+        item.id = consultingData[idx2].id; // 기존 ID 유지
+        item.settled = consultingData[idx2].settled;
+        item.listId = consultingData[idx2].listId;
+        consultingData[idx2] = item;
+      } else {
+        // 아예 못 찾으면 신규 추가
+        console.log('못 찾아서 신규 추가');
+        consultingData.push(item);
+      }
     }
   } else {
     // 신규
