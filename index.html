@@ -7560,7 +7560,8 @@ function generateSettlementFromCurrentData() {
       }
       
       // 본사/외주 구분 (담당자 기준 우선, 없으면 공사유형으로)
-      const manager = item.manager || '기타';
+      // 총괄표의 영업담당자(hqManager)가 있으면 우선 사용, 없으면 공사현황의 담당자 사용
+      const manager = (detail && detail.hqManager) ? detail.hqManager : (item.manager || '기타');
       let hqType = '본사';
       
       // 공사유형에 (외) 표시가 있으면 외주
@@ -7910,10 +7911,8 @@ function openConfirmationModal() {
     loadDetailData();
   }
   
-  // settlementData 생성
-  if (settlementData.length === 0) {
-    settlementData = generateSettlementFromCurrentData();
-  }
+  // settlementData 항상 최신 데이터로 갱신 (총괄표 영업담당자 변경 반영)
+  settlementData = generateSettlementFromCurrentData();
   
   // 기술컨설팅 데이터 로드
   loadConsultingData();
