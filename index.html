@@ -7979,24 +7979,29 @@ function loadConsultingData() {
   try {
     const saved = localStorage.getItem('consultingData');
     if (saved) {
-      consultingData = JSON.parse(saved);
+      let tempData = JSON.parse(saved);
       
-      // 중복 ID 수정
-      const seenIds = new Set();
-      let hasChanges = false;
-      consultingData.forEach((item, idx) => {
-        if (seenIds.has(item.id)) {
-          // 중복 ID 발견 - 새 ID 부여
-          item.id = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${idx}`;
-          hasChanges = true;
+      // 현장명+년도 기준 중복 제거 (회사경비가 있는 것 우선)
+      const siteYearMap = new Map();
+      tempData.forEach(item => {
+        const key = (item.site || '') + '_' + (item.year || '');
+        const existing = siteYearMap.get(key);
+        if (!existing) {
+          siteYearMap.set(key, item);
+        } else {
+          // 회사경비가 있는 것 우선
+          if ((item.companyExp || 0) > (existing.companyExp || 0)) {
+            siteYearMap.set(key, item);
+          }
         }
-        seenIds.add(item.id);
       });
       
-      // 변경사항 있으면 저장
-      if (hasChanges) {
+      consultingData = Array.from(siteYearMap.values());
+      
+      // 중복 제거됐으면 저장
+      if (consultingData.length !== tempData.length) {
         localStorage.setItem('consultingData', JSON.stringify(consultingData));
-        console.log('중복 ID 수정 완료');
+        console.log('현장+년도 중복 제거:', tempData.length, '->', consultingData.length);
       }
     }
   } catch(e) {
@@ -10521,44 +10526,63 @@ function saveConsultingItem() {
 
 // 정산관리 기술컨설팅과 동기화
 function syncConsultingToSettlement(item) {
-  // 정산관리 데이터에서 같은 ID 또는 같은 현장+년도 찾기
-  let existIdx = consultingData.findIndex(d => d.listId === item.id);
+  // 최신 데이터 로드
+  loadConsultingData();
   
-  // listId로 못 찾으면 현장명+년도로 찾기 (정산관리에서 직접 추가된 경우)
+  // 현장명+년도로 먼저 찾기 (가장 확실)
+  let existIdx = consultingData.findIndex(d => d.site === item.site && d.year === item.year);
+  
+  // 못 찾으면 listId로 찾기
   if (existIdx === -1) {
-    existIdx = consultingData.findIndex(d => 
-      d.site === item.site && d.year === item.year && !d.listId
-    );
+    existIdx = consultingData.findIndex(d => d.listId === item.id);
   }
   
-  // 유니크 ID 생성 (Date.now + random + listId 조합)
-  const uniqueId = existIdx !== -1 ? consultingData[existIdx].id : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_s`;
-  
-  const settlementItem = {
-    id: uniqueId,
-    listId: item.id,
-    year: item.year,
-    type: item.type,
-    site: item.site,
-    project: item.project,
-    bidAmount: item.bidAmount,
-    execAmount: item.execAmount,
-    companyExp: existIdx !== -1 ? consultingData[existIdx].companyExp : 0,
-    otherExp: existIdx !== -1 ? consultingData[existIdx].otherExp : 0,
-    manager: item.manager,
-    settled: existIdx !== -1 ? consultingData[existIdx].settled : '미정산'
-  };
-  
-  // 계산
-  settlementItem.totalExpense = settlementItem.execAmount + settlementItem.companyExp + settlementItem.otherExp;
-  settlementItem.profit = settlementItem.bidAmount - settlementItem.totalExpense;
-  settlementItem.profitRate = settlementItem.bidAmount > 0 ? (settlementItem.profit / settlementItem.bidAmount * 100).toFixed(1) : '0.0';
-  settlementItem.settlement = settlementItem.profit > 0 ? Math.round(settlementItem.profit * 0.15) : 0;
-  settlementItem.companyProfit = settlementItem.profit - settlementItem.settlement;
+  console.log('syncConsultingToSettlement - site:', item.site, 'existIdx:', existIdx);
   
   if (existIdx !== -1) {
-    consultingData[existIdx] = settlementItem;
+    // 기존 데이터 업데이트
+    const existing = consultingData[existIdx];
+    existing.listId = item.id;
+    existing.year = item.year;
+    existing.type = item.type;
+    existing.site = item.site;
+    existing.project = item.project;
+    existing.bidAmount = item.bidAmount;
+    existing.execAmount = item.execAmount;
+    existing.manager = item.manager;
+    
+    // 계산
+    existing.totalExpense = existing.execAmount + (existing.companyExp || 0) + (existing.otherExp || 0);
+    existing.profit = existing.bidAmount - existing.totalExpense;
+    existing.profitRate = existing.bidAmount > 0 ? (existing.profit / existing.bidAmount * 100).toFixed(1) : '0.0';
+    existing.settlement = existing.profit > 0 ? Math.round(existing.profit * 0.15) : 0;
+    existing.companyProfit = existing.profit - existing.settlement;
+    
+    consultingData[existIdx] = existing;
   } else {
+    // 신규 추가
+    const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_s`;
+    const settlementItem = {
+      id: uniqueId,
+      listId: item.id,
+      year: item.year,
+      type: item.type,
+      site: item.site,
+      project: item.project,
+      bidAmount: item.bidAmount,
+      execAmount: item.execAmount,
+      companyExp: 0,
+      otherExp: 0,
+      manager: item.manager,
+      settled: '미정산'
+    };
+    
+    settlementItem.totalExpense = settlementItem.execAmount;
+    settlementItem.profit = settlementItem.bidAmount - settlementItem.totalExpense;
+    settlementItem.profitRate = settlementItem.bidAmount > 0 ? (settlementItem.profit / settlementItem.bidAmount * 100).toFixed(1) : '0.0';
+    settlementItem.settlement = settlementItem.profit > 0 ? Math.round(settlementItem.profit * 0.15) : 0;
+    settlementItem.companyProfit = settlementItem.profit - settlementItem.settlement;
+    
     consultingData.push(settlementItem);
   }
   
