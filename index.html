@@ -10963,6 +10963,57 @@ function renderConstructionReport() {
       </div>
       ` : '<p style="text-align:center;color:#999;padding:2rem;">데이터가 없습니다.</p>'}
       
+      <!-- 담당자별 현장 목록 -->
+      ${Object.keys(targetManagers).length > 0 ? `
+      <div style="margin-top:1.5rem;page-break-before:always;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:${themeColor};padding:0.4rem;background:${themeBgColor};border-radius:4px;">
+          📋 담당자별 현장 목록
+        </h3>
+        ${Object.entries(targetManagers)
+          .sort((a, b) => b[1].realSettlement - a[1].realSettlement)
+          .map(([manager, stats]) => {
+            const managerSites = data.filter(item => {
+              const mgr = item.manager || '기타';
+              const isExcluded = item.isExcluded || EXCLUDE_MANAGERS.includes(mgr);
+              const isExt = item.hqType === '외주';
+              if (reportType === '본사') return !isExt && !isExcluded && mgr === manager;
+              if (reportType === '외주') return isExt && mgr === manager;
+              return mgr === manager;
+            });
+            return `
+              <div style="margin-bottom:1rem;">
+                <div style="background:${themeBgColor};padding:0.4rem 0.6rem;border-radius:4px;margin-bottom:0.3rem;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;color:${themeColor};">📌 ${manager} (${stats.count}건)</span>
+                  <span style="font-size:0.8rem;color:${themeColor};">정산: ${fmt(stats.realSettlement)}</span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+                  <thead>
+                    <tr style="background:#f5f5f5;">
+                      <th style="padding:0.3rem;text-align:left;border:1px solid #ddd;">현장명</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">공사금액</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">이익금</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">정산금액</th>
+                      <th style="padding:0.3rem;text-align:center;border:1px solid #ddd;">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${managerSites.map(site => `
+                      <tr>
+                        <td style="padding:0.3rem;border:1px solid #ddd;">${site.site}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(site.amount)}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${site.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(site.profit)}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;font-weight:600;color:${themeColor};border:1px solid #ddd;">${fmt(site.realSettlement)}</td>
+                        <td style="padding:0.3rem;text-align:center;border:1px solid #ddd;font-size:0.7rem;">${site.settled || '미정산'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }).join('')}
+      </div>
+      ` : ''}
+      
       <div style="text-align:center;padding-top:0.75rem;border-top:1px solid #ddd;color:#999;font-size:0.9rem;">
         ㈜석민이앤씨 정산 관리 시스템
       </div>
@@ -11115,6 +11166,52 @@ function renderConsultingReport() {
         </table>
       </div>
       ` : '<p style="text-align:center;color:#999;padding:2rem;">데이터가 없습니다.</p>'}
+      
+      <!-- 담당자별 현장 목록 -->
+      ${Object.keys(managerStats).length > 0 ? `
+      <div style="margin-top:1.5rem;page-break-before:always;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#00897b;padding:0.4rem;background:#e0f2f1;border-radius:4px;">
+          📋 담당자별 컨설팅 현장 목록
+        </h3>
+        ${Object.entries(managerStats)
+          .sort((a, b) => b[1].settlement - a[1].settlement)
+          .map(([manager, stats]) => {
+            const managerSites = data.filter(item => (item.manager || '기타') === manager);
+            return `
+              <div style="margin-bottom:1rem;">
+                <div style="background:#e0f2f1;padding:0.4rem 0.6rem;border-radius:4px;margin-bottom:0.3rem;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;color:#00897b;">📌 ${manager} (${stats.count}건)</span>
+                  <span style="font-size:0.8rem;color:#00897b;">정산: ${fmt(stats.settlement)}</span>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+                  <thead>
+                    <tr style="background:#f5f5f5;">
+                      <th style="padding:0.3rem;text-align:left;border:1px solid #ddd;">현장명</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">낙찰금액</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">지출합계</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">이익금</th>
+                      <th style="padding:0.3rem;text-align:right;border:1px solid #ddd;">정산금액</th>
+                      <th style="padding:0.3rem;text-align:center;border:1px solid #ddd;">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${managerSites.map(site => `
+                      <tr>
+                        <td style="padding:0.3rem;border:1px solid #ddd;">${site.site}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(site.bidAmount)}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#c62828;">${fmt(site.totalExpense || ((site.execAmount||0)+(site.companyExp||0)+(site.otherExp||0)))}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${(site.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(site.profit)}</td>
+                        <td style="padding:0.3rem;text-align:right;font-family:monospace;font-weight:600;color:#00897b;border:1px solid #ddd;">${fmt(site.settlement)}</td>
+                        <td style="padding:0.3rem;text-align:center;border:1px solid #ddd;font-size:0.7rem;">${site.settled || '미정산'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }).join('')}
+      </div>
+      ` : ''}
       
       <div style="text-align:center;padding-top:0.5rem;border-top:1px solid #ddd;color:#999;font-size:0.7rem;">
         ㈜석민이앤씨 정산 관리 시스템
@@ -11317,6 +11414,89 @@ function renderIntegratedReport() {
         </table>
       </div>
       ` : '<p style="text-align:center;color:#999;padding:2rem;">데이터가 없습니다.</p>'}
+      
+      <!-- 담당자별 현장 목록 -->
+      ${Object.keys(managerStats).length > 0 ? `
+      <div style="margin-top:1.5rem;page-break-before:always;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.5rem;color:#9c27b0;padding:0.4rem;background:#f3e5f5;border-radius:4px;">
+          📋 담당자별 현장 목록
+        </h3>
+        ${Object.entries(managerStats)
+          .sort((a, b) => b[1].total.settlement - a[1].total.settlement)
+          .map(([manager, stats]) => {
+            const managerConstSites = constructionData.filter(item => {
+              const mgr = item.manager || '기타';
+              const isExcluded = item.isExcluded || EXCLUDE_MANAGERS.includes(mgr);
+              const isExt = item.hqType === '외주';
+              if (reportType === '본사') return !isExt && !isExcluded && mgr === manager;
+              if (reportType === '외주') return isExt && mgr === manager;
+              return mgr === manager;
+            });
+            const managerConsSites = consData.filter(item => (item.manager || '기타') === manager);
+            
+            return `
+              <div style="margin-bottom:1rem;">
+                <div style="background:#f3e5f5;padding:0.4rem 0.6rem;border-radius:4px;margin-bottom:0.3rem;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-weight:600;color:#9c27b0;">📌 ${manager} (공사${stats.construction.count}건 + 컨설팅${stats.consulting.count}건)</span>
+                  <span style="font-size:0.8rem;color:#9c27b0;">정산합계: ${fmt(stats.total.settlement)}</span>
+                </div>
+                
+                ${managerConstSites.length > 0 ? `
+                <div style="margin-bottom:0.5rem;">
+                  <div style="font-size:0.75rem;color:#1565c0;font-weight:600;margin-bottom:0.2rem;">🏗️ 공사 (${managerConstSites.length}건)</div>
+                  <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+                    <thead>
+                      <tr style="background:#e3f2fd;">
+                        <th style="padding:0.25rem;text-align:left;border:1px solid #ddd;">현장명</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">공사금액</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">이익금</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">정산금액</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${managerConstSites.map(site => `
+                        <tr>
+                          <td style="padding:0.25rem;border:1px solid #ddd;">${site.site}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(site.amount)}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${(site.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(site.profit)}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;font-weight:600;color:#1565c0;border:1px solid #ddd;">${fmt(site.realSettlement)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+                ` : ''}
+                
+                ${managerConsSites.length > 0 ? `
+                <div>
+                  <div style="font-size:0.75rem;color:#00897b;font-weight:600;margin-bottom:0.2rem;">📋 컨설팅 (${managerConsSites.length}건)</div>
+                  <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+                    <thead>
+                      <tr style="background:#e0f2f1;">
+                        <th style="padding:0.25rem;text-align:left;border:1px solid #ddd;">현장명</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">낙찰금액</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">이익금</th>
+                        <th style="padding:0.25rem;text-align:right;border:1px solid #ddd;">정산금액</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${managerConsSites.map(site => `
+                        <tr>
+                          <td style="padding:0.25rem;border:1px solid #ddd;">${site.site}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(site.bidAmount)}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${(site.profit||0) >= 0 ? '#2e7d32' : '#c62828'};">${fmt(site.profit)}</td>
+                          <td style="padding:0.25rem;text-align:right;font-family:monospace;font-weight:600;color:#00897b;border:1px solid #ddd;">${fmt(site.settlement)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+      </div>
+      ` : ''}
       
       <div style="text-align:center;padding-top:0.5rem;border-top:1px solid #ddd;color:#999;font-size:0.7rem;">
         ㈜석민이앤씨 정산 관리 시스템
