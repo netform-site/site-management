@@ -2014,7 +2014,7 @@ let filteredData = null;
 // 본사 담당자 목록 (외주가 아닌 직원)
 const HQ_MANAGERS = ['황윤선', '김성민', '이필선', '한준엽', '정정훈', '조재연'];
 // 정산 제외 담당자 (본사 정산 대상 아님)
-const EXCLUDE_MANAGERS = ['기타', '박연진'];
+const EXCLUDE_MANAGERS = ['기타', '박연진', '이승우'];
 // 외주 담당자 (또는 기타(외) 등)
 const EXT_MANAGERS = ['기타(외)'];
 
@@ -4734,42 +4734,42 @@ function printFieldSettlement() {
       <style>
         @page { 
           size: A4 portrait;
-          margin: 10mm;
+          margin: 15mm;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 15px; font-size: 9px; line-height: 1.3; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        h1 { text-align: center; font-size: 18px; margin-bottom: 5px; }
-        .subtitle { text-align: center; font-size: 10px; color: #f0ad4e; margin-bottom: 15px; font-weight: 600; }
+        * { margin: 0; padding: 0; box-sizing: border-box; color: #000; }
+        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 20px; font-size: 12px; line-height: 1.4; }
+        h1 { text-align: center; font-size: 22px; margin-bottom: 8px; color: #000; }
+        .subtitle { text-align: center; font-size: 14px; color: #333; margin-bottom: 20px; font-weight: 600; }
         
-        .header-section { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #fff8e1; border-radius: 5px; border: 1px solid #f0ad4e; }
-        .header-left div, .header-right div { margin-bottom: 3px; }
+        .header-section { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-radius: 5px; border: 1px solid #ddd; }
+        .header-left div, .header-right div { margin-bottom: 5px; }
         .header-right { text-align: right; }
-        .label { color: #666; font-size: 8px; }
-        .value { font-weight: 600; }
+        .label { color: #333; font-size: 11px; }
+        .value { font-weight: 700; }
         
-        .section-title { font-size: 10px; font-weight: 700; margin: 12px 0 6px; padding: 5px 8px; background: #fff3e0; border-left: 3px solid #f0ad4e; }
+        .section-title { font-size: 13px; font-weight: 700; margin: 15px 0 8px; padding: 6px 10px; background: #f0f0f0; border-left: 4px solid #333; color: #000; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th, td { border: 1px solid #ddd; padding: 4px 5px; text-align: left; font-size: 8px; }
-        th { background: #f5f5f5; font-weight: 600; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 11px; color: #000; }
+        th { background: #e8e8e8; font-weight: 700; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
-        .subtotal { background: #fff3e0; }
-        .total-row { background: #f0ad4e; color: white; font-weight: 700; }
+        .subtotal { background: #f0f0f0; }
+        .total-row { background: #ddd; color: #000; font-weight: 700; }
         
-        .summary-box { margin-top: 12px; padding: 12px; background: #fff8e1; border-radius: 5px; border: 2px solid #f0ad4e; }
-        .summary-title { font-size: 11px; font-weight: 700; margin-bottom: 10px; text-align: center; color: #e65100; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-        .summary-item .label { font-size: 8px; color: #666; margin-bottom: 2px; }
-        .summary-item .value { font-size: 14px; font-weight: 700; }
-        .profit-positive { color: #2e7d32; }
+        .summary-box { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; border: 2px solid #333; }
+        .summary-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; text-align: center; color: #000; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .summary-item .label { font-size: 11px; color: #333; margin-bottom: 5px; }
+        .summary-item .value { font-size: 18px; font-weight: 700; color: #000; }
+        .profit-positive { color: #000; }
         
-        .note-box { margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 5px; font-size: 8px; color: #2e7d32; text-align: center; }
+        .note-box { margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 10px; color: #333; text-align: center; border: 1px solid #ddd; }
         
-        .footer { margin-top: 15px; text-align: center; font-size: 8px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
+        .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 12px; }
         
-        @media print { body { margin: 0; padding: 10px; } }
+        @media print { body { margin: 0; padding: 15px; } }
       </style>
     </head>
     <body>
@@ -4783,7 +4783,7 @@ function printFieldSettlement() {
         </div>
         <div class="header-right">
           <div><span class="label">영업담당자:</span> <span class="value">${salesPerson || '-'}</span></div>
-          <div><span class="label">현장소장:</span> <span class="value" style="color:#e65100;font-size:14px;">${fieldManager || '-'}</span></div>
+          <div><span class="label">현장소장:</span> <span class="value" style="font-size:14px;font-weight:700;">${fieldManager || '-'}</span></div>
         </div>
       </div>
       
@@ -5168,44 +5168,44 @@ function printSalesSettlement() {
       <style>
         @page { 
           size: A4 portrait;
-          margin: 10mm;
+          margin: 15mm;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Malgun Gothic', sans-serif; font-size: 10px; padding: 15px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        * { margin: 0; padding: 0; box-sizing: border-box; color: #000; }
+        body { font-family: 'Malgun Gothic', sans-serif; font-size: 12px; padding: 20px; }
         
-        h1 { text-align: center; font-size: 18px; margin-bottom: 5px; color: #7b1fa2; }
-        .subtitle { text-align: center; font-size: 12px; color: #9c27b0; margin-bottom: 15px; }
+        h1 { text-align: center; font-size: 22px; margin-bottom: 8px; color: #000; }
+        .subtitle { text-align: center; font-size: 14px; color: #333; margin-bottom: 20px; font-weight: 600; }
         
-        .header-section { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #f3e5f5; border-radius: 5px; }
-        .header-left, .header-right { font-size: 9px; }
-        .header-left .label, .header-right .label { color: #666; }
-        .header-left .value, .header-right .value { font-weight: 600; margin-left: 5px; }
+        .header-section { display: flex; justify-content: space-between; margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-radius: 5px; border: 1px solid #ddd; }
+        .header-left, .header-right { font-size: 12px; }
+        .header-left .label, .header-right .label { color: #333; }
+        .header-left .value, .header-right .value { font-weight: 700; margin-left: 5px; }
         
-        .section-title { font-size: 10px; font-weight: 700; margin: 10px 0 5px 0; padding-bottom: 3px; border-bottom: 2px solid #9c27b0; color: #7b1fa2; }
+        .section-title { font-size: 13px; font-weight: 700; margin: 15px 0 8px 0; padding-bottom: 5px; border-bottom: 2px solid #333; color: #000; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; font-size: 9px; }
-        th { background: #f5f5f5; font-weight: 600; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 11px; color: #000; }
+        th { background: #e8e8e8; font-weight: 700; text-align: center; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         
-        .subtotal { background: #f3e5f5; }
-        .total-row { background: #9c27b0; color: white; font-weight: 700; }
+        .subtotal { background: #f0f0f0; }
+        .total-row { background: #ddd; color: #000; font-weight: 700; }
         
-        .summary-box { margin-top: 15px; padding: 15px; background: #f3e5f5; border-radius: 5px; border: 2px solid #9c27b0; }
-        .summary-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; text-align: center; color: #7b1fa2; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-        .summary-item .label { font-size: 9px; color: #666; margin-bottom: 3px; }
-        .summary-item .value { font-size: 14px; font-weight: 700; }
-        .profit-positive { color: #2e7d32; }
-        .profit-negative { color: #c62828; }
+        .summary-box { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; border: 2px solid #333; }
+        .summary-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; text-align: center; color: #000; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .summary-item .label { font-size: 11px; color: #333; margin-bottom: 5px; }
+        .summary-item .value { font-size: 18px; font-weight: 700; color: #000; }
+        .profit-positive { color: #000; }
+        .profit-negative { color: #000; }
         
-        .note-box { margin-top: 10px; padding: 8px; background: #fff8e1; border-radius: 5px; font-size: 8px; color: #f57c00; }
-        .memo-box { margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 5px; font-size: 9px; }
+        .note-box { margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 10px; color: #333; border: 1px solid #ddd; }
+        .memo-box { margin-top: 12px; padding: 10px; background: #f9f9f9; border-radius: 5px; font-size: 11px; border: 1px solid #ddd; }
         
-        .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
+        .footer { margin-top: 25px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 12px; }
         
-        @media print { body { margin: 0; padding: 10px; } }
+        @media print { body { margin: 0; padding: 15px; } }
       </style>
     </head>
     <body>
@@ -10657,6 +10657,18 @@ function renderConstructionReport() {
   // 현재 필터 적용된 데이터 기준으로 보고서 생성
   let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
   
+  // 정산제외 현장은 실정산금액 0으로 처리 (담당자 확인서와 동일하게)
+  data = data.map(item => {
+    if (item.excludedByUser) {
+      return {
+        ...item,
+        realSettlement: 0,
+        companyProfit: 0
+      };
+    }
+    return item;
+  });
+  
   // 년도 필터 적용
   const yearFilter = document.getElementById('reportYearFilter').value;
   if (yearFilter === '2024') {
@@ -10764,30 +10776,29 @@ function renderConstructionReport() {
   
   let html = `
     <div class="report-container" style="font-family:'Noto Sans KR',sans-serif;">
-      <div style="text-align:center;margin-bottom:1.5rem;">
-        <h2 style="font-size:1.4rem;margin-bottom:0.3rem;color:${themeColor};">${reportTitle}</h2>
-        <p style="color:#666;font-size:0.9rem;">보고일: ${reportDate}</p>
+      <div style="text-align:center;margin-bottom:1rem;">
+        <h2 style="font-size:1.2rem;margin-bottom:0.3rem;color:${themeColor};">${reportTitle}</h2>
+        <p style="color:#666;font-size:0.8rem;">보고일: ${reportDate}</p>
       </div>
       
       <!-- 요약 -->
-      <div style="background:${themeBgColor};padding:1.2rem;border-radius:8px;margin-bottom:1.2rem;border:1px solid ${themeColor}40;">
-        <h3 style="font-size:1rem;margin-bottom:0.75rem;color:${themeColor};">📈 정산 요약</h3>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;text-align:center;">
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">총 공사건수</div>
-            <div style="font-size:1.2rem;font-weight:700;">${targetTotal.count}건</div>
+      <div style="background:${themeBgColor};padding:0.8rem;border-radius:8px;margin-bottom:1rem;border:1px solid ${themeColor}40;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;text-align:center;">
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 공사건수</div>
+            <div style="font-size:1rem;font-weight:700;">${targetTotal.count}건</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">총 공사금액</div>
-            <div style="font-size:1.2rem;font-weight:700;">${fmtAmount(targetTotal.amount)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 공사금액</div>
+            <div style="font-size:1rem;font-weight:700;">${fmtAmount(targetTotal.amount)}</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">총 이익금</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${targetTotal.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(targetTotal.profit)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">총 이익금</div>
+            <div style="font-size:1rem;font-weight:700;color:${targetTotal.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmtAmount(targetTotal.profit)}</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">정산금액 (15%)</div>
-            <div style="font-size:1.2rem;font-weight:700;color:${themeColor};">${fmtAmount(targetTotal.realSettlement)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.75rem;color:#666;">정산금액 (15%)</div>
+            <div style="font-size:1rem;font-weight:700;color:${themeColor};">${fmtAmount(targetTotal.realSettlement)}</div>
           </div>
         </div>
       </div>
@@ -10795,18 +10806,18 @@ function renderConstructionReport() {
       <!-- 담당자별 정산 테이블 -->
       ${Object.keys(targetManagers).length > 0 ? `
       <div style="margin-bottom:1rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:${themeColor};padding:0.5rem;background:${themeBgColor};border-radius:4px;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.4rem;color:${themeColor};padding:0.4rem;background:${themeBgColor};border-radius:4px;">
           👤 담당자별 정산 내역 (${targetTotal.count}건)
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
           <thead>
             <tr style="background:${themeColor};color:white;">
-              <th style="padding:0.6rem;text-align:left;border:1px solid ${themeColor};">담당자</th>
-              <th style="padding:0.6rem;text-align:center;border:1px solid ${themeColor};">건수</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid ${themeColor};">공사금액</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid ${themeColor};">이익금</th>
-              <th style="padding:0.6rem;text-align:center;border:1px solid ${themeColor};">이익률</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid ${themeColor};">정산금액(15%)</th>
+              <th style="padding:0.5rem;text-align:left;border:1px solid ${themeColor};">담당자</th>
+              <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};">건수</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};">공사금액</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};">이익금</th>
+              <th style="padding:0.5rem;text-align:center;border:1px solid ${themeColor};">이익률</th>
+              <th style="padding:0.5rem;text-align:right;border:1px solid ${themeColor};">정산금액(15%)</th>
             </tr>
           </thead>
           <tbody>
@@ -10814,30 +10825,30 @@ function renderConstructionReport() {
               .sort((a, b) => b[1].realSettlement - a[1].realSettlement)
               .map(([manager, stats]) => `
                 <tr style="border-bottom:1px solid #ddd;">
-                  <td style="padding:0.6rem;font-weight:600;border:1px solid #ddd;font-size:1rem;">${manager}</td>
-                  <td style="padding:0.6rem;text-align:center;border:1px solid #ddd;font-size:1rem;">${stats.count}건</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ddd;font-size:0.95rem;">${fmt(stats.amount)}</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ddd;font-size:0.95rem;color:${stats.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(stats.profit)}</td>
-                  <td style="padding:0.6rem;text-align:center;border:1px solid #ddd;font-size:0.95rem;">${stats.amount > 0 ? (stats.profit / stats.amount * 100).toFixed(1) : 0}%</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;font-weight:700;color:${themeColor};border:1px solid #ddd;font-size:0.95rem;">${fmt(stats.realSettlement)}</td>
+                  <td style="padding:0.5rem;font-weight:600;border:1px solid #ddd;">${manager}</td>
+                  <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${stats.count}건</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;">${fmt(stats.amount)}</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:${stats.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(stats.profit)}</td>
+                  <td style="padding:0.5rem;text-align:center;border:1px solid #ddd;">${stats.amount > 0 ? (stats.profit / stats.amount * 100).toFixed(1) : 0}%</td>
+                  <td style="padding:0.5rem;text-align:right;font-family:monospace;font-weight:700;color:${themeColor};border:1px solid #ddd;">${fmt(stats.realSettlement)}</td>
                 </tr>
               `).join('')}
           </tbody>
           <tfoot>
             <tr style="background:${themeBgColor};font-weight:700;">
-              <td style="padding:0.6rem;border:1px solid #ccc;font-size:1rem;">합계</td>
-              <td style="padding:0.6rem;text-align:center;border:1px solid #ccc;font-size:1rem;">${targetTotal.count}건</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ccc;font-size:0.95rem;">${fmt(targetTotal.amount)}</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ccc;font-size:0.95rem;color:${targetTotal.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(targetTotal.profit)}</td>
-              <td style="padding:0.6rem;text-align:center;border:1px solid #ccc;font-size:0.95rem;">${targetTotal.amount > 0 ? (targetTotal.profit / targetTotal.amount * 100).toFixed(1) : 0}%</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;font-weight:700;color:${themeColor};border:1px solid #ccc;font-size:0.95rem;">${fmt(targetTotal.realSettlement)}</td>
+              <td style="padding:0.5rem;border:1px solid #ccc;">합계</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ccc;">${targetTotal.count}건</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ccc;">${fmt(targetTotal.amount)}</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;border:1px solid #ccc;color:${targetTotal.profit >= 0 ? '#2e7d32' : '#c62828'};">${fmt(targetTotal.profit)}</td>
+              <td style="padding:0.5rem;text-align:center;border:1px solid #ccc;">${targetTotal.amount > 0 ? (targetTotal.profit / targetTotal.amount * 100).toFixed(1) : 0}%</td>
+              <td style="padding:0.5rem;text-align:right;font-family:monospace;font-weight:700;color:${themeColor};border:1px solid #ccc;">${fmt(targetTotal.realSettlement)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-      ` : '<p style="text-align:center;color:#999;padding:2rem;font-size:1rem;">데이터가 없습니다.</p>'}
+      ` : '<p style="text-align:center;color:#999;padding:2rem;">데이터가 없습니다.</p>'}
       
-      <div style="text-align:center;padding-top:0.75rem;border-top:1px solid #ddd;color:#999;font-size:0.8rem;">
+      <div style="text-align:center;padding-top:0.75rem;border-top:1px solid #ddd;color:#999;font-size:0.9rem;">
         ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
@@ -11047,7 +11058,7 @@ function renderIntegratedReport() {
       managerStats[manager] = { 
         construction: { count: 0, amount: 0, profit: 0, settlement: 0 },
         consulting: { count: 0, bidAmount: 0, profit: 0 },
-        total: { count: 0, profit: 0, settlement: 0 }
+        total: { count: 0, settlement: 0 }
       };
     }
     managerStats[manager].construction.count++;
@@ -11056,9 +11067,11 @@ function renderIntegratedReport() {
     managerStats[manager].construction.settlement += item.realSettlement || 0;
   });
   
-  // 컨설팅 집계
+  // 컨설팅 집계 (EXCLUDE_MANAGERS 제외)
   consData.forEach(item => {
     const manager = item.manager || '기타';
+    if (EXCLUDE_MANAGERS.includes(manager)) return; // 제외 담당자 스킵
+    
     const bidAmount = parseFloat(item.bidAmount) || 0;
     const execAmount = parseFloat(item.execAmount) || 0;
     const profit = bidAmount - execAmount;
@@ -11067,7 +11080,7 @@ function renderIntegratedReport() {
       managerStats[manager] = { 
         construction: { count: 0, amount: 0, profit: 0, settlement: 0 },
         consulting: { count: 0, bidAmount: 0, profit: 0 },
-        total: { count: 0, profit: 0, settlement: 0 }
+        total: { count: 0, settlement: 0 }
       };
     }
     managerStats[manager].consulting.count++;
@@ -11079,21 +11092,20 @@ function renderIntegratedReport() {
   let grandTotal = { 
     construction: { count: 0, settlement: 0 },
     consulting: { count: 0, profit: 0 },
-    total: { count: 0, profit: 0, settlement: 0 }
+    total: { count: 0, settlement: 0 }
   };
   
   Object.values(managerStats).forEach(stats => {
     stats.total.count = stats.construction.count + stats.consulting.count;
-    stats.total.profit = stats.construction.profit + stats.consulting.profit;
-    stats.total.settlement = stats.construction.settlement + stats.consulting.profit; // 컨설팅은 이익금=정산금
+    // 정산합계 = 공사정산금액만 (컨설팅은 별도)
+    stats.total.settlement = stats.construction.settlement;
     
     grandTotal.construction.count += stats.construction.count;
     grandTotal.construction.settlement += stats.construction.settlement;
     grandTotal.consulting.count += stats.consulting.count;
     grandTotal.consulting.profit += stats.consulting.profit;
     grandTotal.total.count += stats.total.count;
-    grandTotal.total.profit += stats.total.profit;
-    grandTotal.total.settlement += stats.total.settlement;
+    grandTotal.total.settlement += stats.construction.settlement;
   });
   
   const today = new Date();
@@ -11101,31 +11113,30 @@ function renderIntegratedReport() {
   
   let html = `
     <div class="report-container" style="font-family:'Noto Sans KR',sans-serif;">
-      <div style="text-align:center;margin-bottom:1.5rem;">
-        <h2 style="font-size:1.4rem;margin-bottom:0.3rem;color:#9c27b0;">📊 통합 정산 보고서 (공사+컨설팅)</h2>
-        <p style="color:#666;font-size:0.9rem;">보고일: ${reportDate}</p>
+      <div style="text-align:center;margin-bottom:1rem;">
+        <h2 style="font-size:1.2rem;margin-bottom:0.3rem;color:#9c27b0;">📊 통합 정산 보고서</h2>
+        <p style="color:#666;font-size:0.8rem;">보고일: ${reportDate}</p>
       </div>
       
       <!-- 요약 -->
-      <div style="background:#f3e5f5;padding:1.2rem;border-radius:8px;margin-bottom:1.2rem;border:1px solid #9c27b040;">
-        <h3 style="font-size:1rem;margin-bottom:0.75rem;color:#9c27b0;">📈 통합 정산 요약</h3>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;text-align:center;">
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">총 건수</div>
-            <div style="font-size:1.2rem;font-weight:700;">${grandTotal.total.count}건</div>
-            <div style="font-size:0.75rem;color:#888;">공사${grandTotal.construction.count} + 컨설팅${grandTotal.consulting.count}</div>
+      <div style="background:#f3e5f5;padding:0.8rem;border-radius:8px;margin-bottom:1rem;border:1px solid #9c27b040;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;text-align:center;">
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.7rem;color:#666;">총 건수</div>
+            <div style="font-size:1rem;font-weight:700;">${grandTotal.total.count}건</div>
+            <div style="font-size:0.65rem;color:#888;">공사${grandTotal.construction.count}+컨설팅${grandTotal.consulting.count}</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">공사 정산</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#1565c0;">${fmtAmount(grandTotal.construction.settlement)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.7rem;color:#666;">공사 정산</div>
+            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmtAmount(grandTotal.construction.settlement)}</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">컨설팅 이익</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#00897b;">${fmtAmount(grandTotal.consulting.profit)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.7rem;color:#666;">컨설팅 이익</div>
+            <div style="font-size:1rem;font-weight:700;color:#00897b;">${fmtAmount(grandTotal.consulting.profit)}</div>
           </div>
-          <div style="background:white;padding:0.75rem;border-radius:6px;border:1px solid #ddd;">
-            <div style="font-size:0.85rem;color:#666;">정산 총액</div>
-            <div style="font-size:1.2rem;font-weight:700;color:#9c27b0;">${fmtAmount(grandTotal.total.settlement)}</div>
+          <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
+            <div style="font-size:0.7rem;color:#666;">정산 합계</div>
+            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(grandTotal.total.settlement)}</div>
           </div>
         </div>
       </div>
@@ -11133,18 +11144,18 @@ function renderIntegratedReport() {
       <!-- 담당자별 통합 테이블 -->
       ${Object.keys(managerStats).length > 0 ? `
       <div style="margin-bottom:1rem;">
-        <h3 style="font-size:1rem;margin-bottom:0.5rem;color:#9c27b0;padding:0.5rem;background:#f3e5f5;border-radius:4px;">
+        <h3 style="font-size:0.9rem;margin-bottom:0.4rem;color:#9c27b0;padding:0.4rem;background:#f3e5f5;border-radius:4px;">
           👤 담당자별 통합 정산 내역
         </h3>
-        <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
           <thead>
             <tr style="background:#9c27b0;color:white;">
-              <th style="padding:0.6rem;text-align:left;border:1px solid #9c27b0;">담당자</th>
-              <th style="padding:0.6rem;text-align:center;border:1px solid #9c27b0;">공사(건)</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid #9c27b0;">공사 정산</th>
-              <th style="padding:0.6rem;text-align:center;border:1px solid #9c27b0;">컨설팅(건)</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid #9c27b0;">컨설팅 이익</th>
-              <th style="padding:0.6rem;text-align:right;border:1px solid #9c27b0;background:#7b1fa2;">정산 합계</th>
+              <th style="padding:0.4rem;text-align:left;border:1px solid #9c27b0;">담당자</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #9c27b0;">공사</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #9c27b0;">공사정산</th>
+              <th style="padding:0.4rem;text-align:center;border:1px solid #9c27b0;">컨설팅</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #9c27b0;">컨설팅이익</th>
+              <th style="padding:0.4rem;text-align:right;border:1px solid #9c27b0;background:#7b1fa2;">정산합계</th>
             </tr>
           </thead>
           <tbody>
@@ -11152,30 +11163,30 @@ function renderIntegratedReport() {
               .sort((a, b) => b[1].total.settlement - a[1].total.settlement)
               .map(([manager, stats]) => `
                 <tr style="border-bottom:1px solid #ddd;">
-                  <td style="padding:0.6rem;font-weight:600;border:1px solid #ddd;font-size:1rem;">${manager}</td>
-                  <td style="padding:0.6rem;text-align:center;border:1px solid #ddd;font-size:1rem;">${stats.construction.count}건</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#1565c0;font-size:0.95rem;">${fmt(stats.construction.settlement)}</td>
-                  <td style="padding:0.6rem;text-align:center;border:1px solid #ddd;font-size:1rem;">${stats.consulting.count}건</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#00897b;font-size:0.95rem;">${fmt(stats.consulting.profit)}</td>
-                  <td style="padding:0.6rem;text-align:right;font-family:monospace;font-weight:700;color:#9c27b0;border:1px solid #ddd;background:#fce4ec;font-size:0.95rem;">${fmt(stats.total.settlement)}</td>
+                  <td style="padding:0.4rem;font-weight:600;border:1px solid #ddd;">${manager}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">${stats.construction.count}건</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#1565c0;">${fmt(stats.construction.settlement)}</td>
+                  <td style="padding:0.4rem;text-align:center;border:1px solid #ddd;">${stats.consulting.count}건</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ddd;color:#00897b;">${fmt(stats.consulting.profit)}</td>
+                  <td style="padding:0.4rem;text-align:right;font-family:monospace;font-weight:700;color:#9c27b0;border:1px solid #ddd;background:#fce4ec;">${fmt(stats.total.settlement)}</td>
                 </tr>
               `).join('')}
           </tbody>
           <tfoot>
             <tr style="background:#f3e5f5;font-weight:700;">
-              <td style="padding:0.6rem;border:1px solid #ccc;font-size:1rem;">합계</td>
-              <td style="padding:0.6rem;text-align:center;border:1px solid #ccc;font-size:1rem;">${grandTotal.construction.count}건</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ccc;color:#1565c0;font-size:0.95rem;">${fmt(grandTotal.construction.settlement)}</td>
-              <td style="padding:0.6rem;text-align:center;border:1px solid #ccc;font-size:1rem;">${grandTotal.consulting.count}건</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;border:1px solid #ccc;color:#00897b;font-size:0.95rem;">${fmt(grandTotal.consulting.profit)}</td>
-              <td style="padding:0.6rem;text-align:right;font-family:monospace;font-weight:700;color:#9c27b0;border:1px solid #ccc;background:#e1bee7;font-size:0.95rem;">${fmt(grandTotal.total.settlement)}</td>
+              <td style="padding:0.4rem;border:1px solid #ccc;">합계</td>
+              <td style="padding:0.4rem;text-align:center;border:1px solid #ccc;">${grandTotal.construction.count}건</td>
+              <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ccc;color:#1565c0;">${fmt(grandTotal.construction.settlement)}</td>
+              <td style="padding:0.4rem;text-align:center;border:1px solid #ccc;">${grandTotal.consulting.count}건</td>
+              <td style="padding:0.4rem;text-align:right;font-family:monospace;border:1px solid #ccc;color:#00897b;">${fmt(grandTotal.consulting.profit)}</td>
+              <td style="padding:0.4rem;text-align:right;font-family:monospace;font-weight:700;color:#9c27b0;border:1px solid #ccc;background:#e1bee7;">${fmt(grandTotal.total.settlement)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-      ` : '<p style="text-align:center;color:#999;padding:2rem;font-size:1rem;">데이터가 없습니다.</p>'}
+      ` : '<p style="text-align:center;color:#999;padding:2rem;">데이터가 없습니다.</p>'}
       
-      <div style="text-align:center;padding-top:0.75rem;border-top:1px solid #ddd;color:#999;font-size:0.8rem;">
+      <div style="text-align:center;padding-top:0.5rem;border-top:1px solid #ddd;color:#999;font-size:0.7rem;">
         ㈜석민이앤씨 정산 관리 시스템
       </div>
     </div>
@@ -11473,14 +11484,24 @@ function printReport() {
       <style>
         @page { 
           size: A4 portrait;
-          margin: 10mm;
+          margin: 15mm;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 15px; font-size: 9px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 20px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 4px 6px; font-size: 8px; }
-        th { background: #f5f5f5 !important; }
-        @media print { body { padding: 10px; } }
+        th, td { border: 1px solid #333; padding: 8px 10px; font-size: 11px; color: #000 !important; }
+        th { background: #f0f0f0 !important; color: #000 !important; font-weight: 700; }
+        tr { background: white !important; }
+        tfoot tr { background: #f5f5f5 !important; }
+        h2, h3 { color: #000 !important; }
+        div { color: #000 !important; }
+        .report-container * { color: #000 !important; background-color: white !important; }
+        .report-container th { background-color: #e0e0e0 !important; }
+        .report-container tfoot td { background-color: #f0f0f0 !important; }
+        @media print { 
+          body { padding: 10px; } 
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
       </style>
     </head>
     <body>${content}</body>
