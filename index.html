@@ -8044,19 +8044,11 @@ function closeConfirmationModal() {
 function getFilteredConfirmationData() {
   let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
   
-  // 정산제외 현장은 금액을 0으로 처리 (목록에는 표시, 합계에서 제외)
+  // 정산제외 현장은 실정산금액만 0으로 처리 (다른 금액은 그대로 표시)
   data = data.map(item => {
     if (item.excludedByUser) {
       return {
         ...item,
-        amount: 0,
-        material: 0,
-        labor: 0,
-        laborTotal: 0,
-        expenseTotal: 0,
-        totalExpense: 0,
-        profit: 0,
-        profitRate: 0,
         realSettlement: 0,
         companyProfit: 0
       };
