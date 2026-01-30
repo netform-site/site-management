@@ -7528,6 +7528,32 @@ function updateSettlementStatsCards(data) {
 }
 
 function generateSettlementFromCurrentData() {
+  // allData가 비어있으면 constructionData에서 로드
+  if (!allData || Object.keys(allData).length === 0) {
+    const saved = localStorage.getItem('constructionData');
+    if (saved) {
+      try {
+        allData = JSON.parse(saved);
+      } catch(e) {
+        console.error('constructionData 로드 실패:', e);
+        allData = {};
+      }
+    }
+  }
+  
+  // detailData도 로드
+  if (!detailData || Object.keys(detailData).length === 0) {
+    const savedDetail = localStorage.getItem('constructionDetailData');
+    if (savedDetail) {
+      try {
+        detailData = JSON.parse(savedDetail);
+      } catch(e) {
+        console.error('detailData 로드 실패:', e);
+        detailData = {};
+      }
+    }
+  }
+  
   // 24년, 25년, 26년 데이터 모두 가져오기
   let allSettlementData = [];
   
