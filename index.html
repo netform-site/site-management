@@ -10799,8 +10799,9 @@ function closeReportModal() {
 function renderConstructionReport() {
   const reportType = document.getElementById('reportTypeFilter').value || '본사';
   
-  // 현재 필터 적용된 데이터 기준으로 보고서 생성
-  let data = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
+  // 현재 필터 적용된 데이터 기준으로 보고서 생성 - 무조건 새로 생성
+  let data = generateSettlementFromCurrentData();
+  console.log('공사정산 보고서 데이터:', data.length, '건');
   
   // 정산제외 현장은 실정산금액 0으로 처리 (담당자 확인서와 동일하게)
   data = data.map(item => {
@@ -11258,12 +11259,14 @@ function renderIntegratedReport() {
   const yearFilter = document.getElementById('reportYearFilter').value;
   const settledFilter = document.getElementById('reportSettledFilter').value;
   
-  // 공사 데이터
-  let constructionData = settlementData.length > 0 ? [...settlementData] : generateSettlementFromCurrentData();
+  // 공사 데이터 - 무조건 새로 생성
+  let constructionData = generateSettlementFromCurrentData();
+  console.log('통합보고서 공사 데이터:', constructionData.length, '건');
   
   // 컨설팅 데이터 (consultingData 사용)
   loadConsultingData();
   let consData = [...consultingData];
+  console.log('통합보고서 컨설팅 데이터:', consData.length, '건');
   
   // 년도 필터
   if (yearFilter === '2024') {
