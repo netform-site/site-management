@@ -11377,10 +11377,14 @@ function renderIntegratedReport() {
     displayConsTotal += stats.consulting.settlement;
   });
   
-  console.log('=== 표시할 값 ===');
-  console.log('공사:', Math.round(displayConstTotal).toLocaleString());
-  console.log('컨설팅:', Math.round(displayConsTotal).toLocaleString());
-  console.log('합계:', Math.round(displayConstTotal + displayConsTotal).toLocaleString());
+  const displayConstStr = fmtAmount(displayConstTotal);
+  const displayConsStr = fmtAmount(displayConsTotal);
+  const displayTotalStr = fmtAmount(displayConstTotal + displayConsTotal);
+  
+  console.log('=== 최종 표시 문자열 ===');
+  console.log('공사:', displayConstStr);
+  console.log('컨설팅:', displayConsStr);
+  console.log('합계:', displayTotalStr);
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
@@ -11402,15 +11406,15 @@ function renderIntegratedReport() {
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">공사 정산</div>
-            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmtAmount(displayConstTotal)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${displayConstStr}</div>
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">컨설팅 정산</div>
-            <div style="font-size:1rem;font-weight:700;color:#00897b;">${fmtAmount(displayConsTotal)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#00897b;">${displayConsStr}</div>
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">정산 합계</div>
-            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(displayConstTotal + displayConsTotal)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${displayTotalStr}</div>
           </div>
         </div>
       </div>
@@ -11550,6 +11554,20 @@ function renderIntegratedReport() {
   `;
   
   document.getElementById('reportContent').innerHTML = html;
+  
+  // 값이 꼬이는 문제 해결 - 올바른 값으로 강제 설정
+  setTimeout(() => {
+    const boxes = document.querySelectorAll('#reportContent [style*="grid-template-columns"] > div');
+    if (boxes.length >= 4) {
+      const constBox = boxes[1].querySelector('div[style*="font-weight:700"]');
+      const consBox = boxes[2].querySelector('div[style*="font-weight:700"]');
+      const totalBox = boxes[3].querySelector('div[style*="font-weight:700"]');
+      if (constBox) constBox.textContent = displayConstStr;
+      if (consBox) consBox.textContent = displayConsStr;
+      if (totalBox) totalBox.textContent = displayTotalStr;
+      console.log('★ 상단 요약 강제 수정:', displayTotalStr);
+    }
+  }, 50);
 }
 
 // 기존 renderReport 함수는 renderConstructionReport로 대체
