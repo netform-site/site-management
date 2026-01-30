@@ -7981,10 +7981,10 @@ function loadConsultingData() {
     if (saved) {
       let tempData = JSON.parse(saved);
       
-      // 현장명+년도 기준 중복 제거 (회사경비가 있는 것 우선)
+      // 현장명+년도+금액 기준 중복 제거 (같은 아파트 다른 공사 허용)
       const siteYearMap = new Map();
       tempData.forEach(item => {
-        const key = (item.site || '') + '_' + (item.year || '');
+        const key = (item.site || '') + '_' + (item.year || '') + '_' + (item.bidAmount || 0);
         const existing = siteYearMap.get(key);
         if (!existing) {
           siteYearMap.set(key, item);
@@ -8001,7 +8001,7 @@ function loadConsultingData() {
       // 중복 제거됐으면 저장
       if (consultingData.length !== tempData.length) {
         localStorage.setItem('consultingData', JSON.stringify(consultingData));
-        console.log('현장+년도 중복 제거:', tempData.length, '->', consultingData.length);
+        console.log('현장+년도+금액 중복 제거:', tempData.length, '->', consultingData.length);
       }
     }
   } catch(e) {
@@ -9652,14 +9652,18 @@ function saveConsultingData() {
   // 최신 데이터 로드
   loadConsultingData();
   
-  // 먼저 현장명+년도로 찾기 (가장 확실한 방법)
-  let idx = consultingData.findIndex(d => d.site === site && d.year === year);
-  console.log('현장명+년도로 찾은 idx:', idx);
-  
-  // 못 찾으면 editId로 찾기
-  if (idx === -1 && editId) {
+  // editId로 먼저 찾기 (수정 시)
+  let idx = -1;
+  if (editId) {
     idx = consultingData.findIndex(d => d.id === editId);
     console.log('editId로 찾은 idx:', idx);
+  }
+  
+  // 못 찾으면 현장명+년도+금액으로 찾기
+  if (idx === -1) {
+    const originalBidAmount = editId ? (consultingData.find(d => d.id === editId)?.bidAmount || bidAmount) : bidAmount;
+    idx = consultingData.findIndex(d => d.site === site && d.year === year && d.bidAmount === originalBidAmount);
+    console.log('현장명+년도+금액으로 찾은 idx:', idx);
   }
   
   if (idx !== -1) {
@@ -10529,15 +10533,15 @@ function syncConsultingToSettlement(item) {
   // 최신 데이터 로드
   loadConsultingData();
   
-  // 현장명+년도로 먼저 찾기 (가장 확실)
-  let existIdx = consultingData.findIndex(d => d.site === item.site && d.year === item.year);
+  // listId로 먼저 찾기
+  let existIdx = consultingData.findIndex(d => d.listId === item.id);
   
-  // 못 찾으면 listId로 찾기
+  // 못 찾으면 현장명+년도+금액으로 찾기 (같은 아파트 다른 공사 구분)
   if (existIdx === -1) {
-    existIdx = consultingData.findIndex(d => d.listId === item.id);
+    existIdx = consultingData.findIndex(d => d.site === item.site && d.year === item.year && d.bidAmount === item.bidAmount);
   }
   
-  console.log('syncConsultingToSettlement - site:', item.site, 'existIdx:', existIdx);
+  console.log('syncConsultingToSettlement - site:', item.site, 'bidAmount:', item.bidAmount, 'existIdx:', existIdx);
   
   if (existIdx !== -1) {
     // 기존 데이터 업데이트
