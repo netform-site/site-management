@@ -11398,7 +11398,7 @@ function renderIntegratedReport() {
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">정산 합계</div>
-            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(grandTotal.total.settlement)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(grandTotal.construction.settlement + grandTotal.consulting.settlement)}</div>
           </div>
         </div>
       </div>
