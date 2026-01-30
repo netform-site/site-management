@@ -1372,6 +1372,9 @@ tr.selected { background: var(--primary-light); }
             <option value="외주">외주</option>
             <option value="전체">전체</option>
           </select>
+          <select id="reportManagerFilter" class="search-select" onchange="renderCurrentReport()" style="min-width:120px;">
+            <option value="">담당자 전체</option>
+          </select>
         </div>
       </div>
       
@@ -10749,9 +10752,44 @@ function openReportModal(type = '본사') {
   const title = '📋 대표님 보고서';
   document.getElementById('reportModalTitle').textContent = title;
   
+  // 담당자 목록 채우기
+  populateReportManagerFilter();
+  
   // 기본 탭 설정
   currentReportTab = 'construction';
   switchReportTab('construction');
+}
+
+// 담당자 목록 채우기
+function populateReportManagerFilter() {
+  const select = document.getElementById('reportManagerFilter');
+  const currentValue = select.value;
+  
+  // 공사 담당자
+  let managers = new Set();
+  const constData = generateSettlementFromCurrentData();
+  constData.forEach(d => {
+    if (d.manager && d.manager !== '기타') managers.add(d.manager);
+  });
+  
+  // 컨설팅 담당자
+  const consData = JSON.parse(localStorage.getItem('consultingData')) || [];
+  consData.forEach(d => {
+    if (d.manager && d.manager !== '기타') managers.add(d.manager);
+  });
+  
+  // 제외 담당자 빼기
+  const EXCL = ['기타', '박연진', '이승우'];
+  EXCL.forEach(m => managers.delete(m));
+  
+  // 옵션 생성
+  select.innerHTML = '<option value="">담당자 전체</option>';
+  Array.from(managers).sort().forEach(m => {
+    select.innerHTML += `<option value="${m}">${m}</option>`;
+  });
+  
+  // 이전 값 복원
+  if (currentValue) select.value = currentValue;
 }
 
 function switchReportTab(tab) {
@@ -10836,6 +10874,12 @@ function renderConstructionReport() {
   const settledFilter = document.getElementById('reportSettledFilter').value;
   if (settledFilter) {
     data = data.filter(item => item.settled === settledFilter);
+  }
+  
+  // 담당자 필터
+  const managerFilter = document.getElementById('reportManagerFilter').value;
+  if (managerFilter) {
+    data = data.filter(item => item.manager === managerFilter);
   }
   
   // 본사/외주별 담당자 집계 (정산 제외 담당자 분리)
@@ -11084,6 +11128,12 @@ function renderConsultingReport() {
     data = data.filter(item => item.settled === settledFilter);
   }
   
+  // 담당자 필터
+  const managerFilter = document.getElementById('reportManagerFilter').value;
+  if (managerFilter) {
+    data = data.filter(item => item.manager === managerFilter);
+  }
+  
   // EXCLUDE_MANAGERS 제외
   data = data.filter(item => !EXCLUDE_MANAGERS.includes(item.manager));
   
@@ -11297,6 +11347,13 @@ function renderIntegratedReport() {
   if (settledFilter) {
     constructionData = constructionData.filter(item => item.settled === settledFilter);
     consData = consData.filter(item => item.settled === settledFilter);
+  }
+  
+  // 담당자 필터
+  const managerFilter = document.getElementById('reportManagerFilter').value;
+  if (managerFilter) {
+    constructionData = constructionData.filter(item => item.manager === managerFilter);
+    consData = consData.filter(item => item.manager === managerFilter);
   }
   
   // 본사/외주 필터 (공사만)
@@ -11564,7 +11621,7 @@ function renderIntegratedReport() {
         document.getElementById('integratedTotalValue').textContent = totalVal;
       }
     }
-  }, 100);
+  }, 300);
 }
 
 // 기존 renderReport 함수는 renderConstructionReport로 대체
