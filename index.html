@@ -1372,9 +1372,21 @@ tr.selected { background: var(--primary-light); }
             <option value="외주">외주</option>
             <option value="전체">전체</option>
           </select>
-          <select id="reportManagerFilter" class="search-select" onchange="renderCurrentReport()" style="min-width:120px;">
-            <option value="">담당자 전체</option>
-          </select>
+          <div style="position:relative;display:inline-block;">
+            <button type="button" id="managerFilterBtn" onclick="toggleManagerDropdown()" 
+              style="padding:0.5rem 1rem;border:1px solid #ddd;border-radius:4px;background:white;cursor:pointer;min-width:140px;text-align:left;">
+              담당자 선택 ▼
+            </button>
+            <div id="managerDropdown" style="display:none;position:absolute;top:100%;left:0;background:white;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:1000;min-width:160px;max-height:250px;overflow-y:auto;">
+              <div style="padding:0.5rem;border-bottom:1px solid #eee;">
+                <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+                  <input type="checkbox" id="managerSelectAll" onchange="toggleAllManagers(this.checked)">
+                  <span style="font-weight:600;">전체 선택</span>
+                </label>
+              </div>
+              <div id="managerCheckboxList" style="padding:0.5rem;"></div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -10762,9 +10774,6 @@ function openReportModal(type = '본사') {
 
 // 담당자 목록 채우기
 function populateReportManagerFilter() {
-  const select = document.getElementById('reportManagerFilter');
-  const currentValue = select.value;
-  
   // 공사 담당자
   let managers = new Set();
   const constData = generateSettlementFromCurrentData();
@@ -10782,15 +10791,71 @@ function populateReportManagerFilter() {
   const EXCL = ['기타', '박연진', '이승우'];
   EXCL.forEach(m => managers.delete(m));
   
-  // 옵션 생성
-  select.innerHTML = '<option value="">담당자 전체</option>';
+  // 체크박스 생성
+  const list = document.getElementById('managerCheckboxList');
+  list.innerHTML = '';
   Array.from(managers).sort().forEach(m => {
-    select.innerHTML += `<option value="${m}">${m}</option>`;
+    list.innerHTML += `
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.25rem 0;">
+        <input type="checkbox" class="managerCheckbox" value="${m}" onchange="updateManagerFilter()" checked>
+        <span>${m}</span>
+      </label>
+    `;
   });
   
-  // 이전 값 복원
-  if (currentValue) select.value = currentValue;
+  // 전체 선택 체크
+  document.getElementById('managerSelectAll').checked = true;
+  updateManagerButtonText();
 }
+
+function toggleManagerDropdown() {
+  const dropdown = document.getElementById('managerDropdown');
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleAllManagers(checked) {
+  document.querySelectorAll('.managerCheckbox').forEach(cb => cb.checked = checked);
+  updateManagerFilter();
+}
+
+function updateManagerFilter() {
+  const checkboxes = document.querySelectorAll('.managerCheckbox');
+  const checkedCount = document.querySelectorAll('.managerCheckbox:checked').length;
+  document.getElementById('managerSelectAll').checked = checkedCount === checkboxes.length;
+  updateManagerButtonText();
+  renderCurrentReport();
+}
+
+function updateManagerButtonText() {
+  const checkboxes = document.querySelectorAll('.managerCheckbox');
+  const checked = document.querySelectorAll('.managerCheckbox:checked');
+  const btn = document.getElementById('managerFilterBtn');
+  
+  if (checked.length === 0) {
+    btn.textContent = '담당자 선택 ▼';
+  } else if (checked.length === checkboxes.length) {
+    btn.textContent = '담당자 전체 ▼';
+  } else if (checked.length <= 2) {
+    btn.textContent = Array.from(checked).map(c => c.value).join(', ') + ' ▼';
+  } else {
+    btn.textContent = checked.length + '명 선택 ▼';
+  }
+}
+
+function getSelectedManagers() {
+  const checked = document.querySelectorAll('.managerCheckbox:checked');
+  if (checked.length === 0) return null; // 전체
+  return Array.from(checked).map(c => c.value);
+}
+
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+  const dropdown = document.getElementById('managerDropdown');
+  const btn = document.getElementById('managerFilterBtn');
+  if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
 
 function switchReportTab(tab) {
   currentReportTab = tab;
@@ -10876,10 +10941,10 @@ function renderConstructionReport() {
     data = data.filter(item => item.settled === settledFilter);
   }
   
-  // 담당자 필터
-  const managerFilter = document.getElementById('reportManagerFilter').value;
-  if (managerFilter) {
-    data = data.filter(item => item.manager === managerFilter);
+  // 담당자 필터 (다중 선택)
+  const selectedManagers = getSelectedManagers();
+  if (selectedManagers && selectedManagers.length > 0) {
+    data = data.filter(item => selectedManagers.includes(item.manager));
   }
   
   // 본사/외주별 담당자 집계 (정산 제외 담당자 분리)
@@ -11128,10 +11193,10 @@ function renderConsultingReport() {
     data = data.filter(item => item.settled === settledFilter);
   }
   
-  // 담당자 필터
-  const managerFilter = document.getElementById('reportManagerFilter').value;
-  if (managerFilter) {
-    data = data.filter(item => item.manager === managerFilter);
+  // 담당자 필터 (다중 선택)
+  const selectedManagers = getSelectedManagers();
+  if (selectedManagers && selectedManagers.length > 0) {
+    data = data.filter(item => selectedManagers.includes(item.manager));
   }
   
   // EXCLUDE_MANAGERS 제외
@@ -11349,11 +11414,11 @@ function renderIntegratedReport() {
     consData = consData.filter(item => item.settled === settledFilter);
   }
   
-  // 담당자 필터
-  const managerFilter = document.getElementById('reportManagerFilter').value;
-  if (managerFilter) {
-    constructionData = constructionData.filter(item => item.manager === managerFilter);
-    consData = consData.filter(item => item.manager === managerFilter);
+  // 담당자 필터 (다중 선택)
+  const selectedManagers = getSelectedManagers();
+  if (selectedManagers && selectedManagers.length > 0) {
+    constructionData = constructionData.filter(item => selectedManagers.includes(item.manager));
+    consData = consData.filter(item => selectedManagers.includes(item.manager));
   }
   
   // 본사/외주 필터 (공사만)
