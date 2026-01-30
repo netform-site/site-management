@@ -11370,11 +11370,17 @@ function renderIntegratedReport() {
     grandTotal.total.settlement += stats.total.settlement;
   });
   
-  console.log('=== grandTotal 값 ===');
-  console.log('공사:', Math.round(grandTotal.construction.settlement).toLocaleString());
-  console.log('컨설팅:', Math.round(grandTotal.consulting.settlement).toLocaleString());
-  console.log('합계(total):', Math.round(grandTotal.total.settlement).toLocaleString());
-  console.log('합계(직접):', Math.round(grandTotal.construction.settlement + grandTotal.consulting.settlement).toLocaleString());
+  // 상단 요약에 표시할 값 직접 계산 (담당자별 합계와 동일)
+  let displayConstTotal = 0, displayConsTotal = 0;
+  Object.values(managerStats).forEach(stats => {
+    displayConstTotal += stats.construction.settlement;
+    displayConsTotal += stats.consulting.settlement;
+  });
+  
+  console.log('=== 표시할 값 ===');
+  console.log('공사:', Math.round(displayConstTotal).toLocaleString());
+  console.log('컨설팅:', Math.round(displayConsTotal).toLocaleString());
+  console.log('합계:', Math.round(displayConstTotal + displayConsTotal).toLocaleString());
   
   const today = new Date();
   const reportDate = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
@@ -11396,15 +11402,15 @@ function renderIntegratedReport() {
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">공사 정산</div>
-            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmtAmount(grandTotal.construction.settlement)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#1565c0;">${fmtAmount(displayConstTotal)}</div>
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">컨설팅 정산</div>
-            <div style="font-size:1rem;font-weight:700;color:#00897b;">${fmtAmount(grandTotal.consulting.settlement)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#00897b;">${fmtAmount(displayConsTotal)}</div>
           </div>
           <div style="background:white;padding:0.5rem;border-radius:6px;border:1px solid #ddd;">
             <div style="font-size:0.7rem;color:#666;">정산 합계</div>
-            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(grandTotal.construction.settlement + grandTotal.consulting.settlement)}</div>
+            <div style="font-size:1rem;font-weight:700;color:#9c27b0;">${fmtAmount(displayConstTotal + displayConsTotal)}</div>
           </div>
         </div>
       </div>
